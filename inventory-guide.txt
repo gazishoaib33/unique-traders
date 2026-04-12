@@ -1,0 +1,121 @@
+SHEET NAME: Inventory – ইউনিক ট্রেডার্স
+HOW TO USE: Copy this into Google Sheets. Each tab below is a separate sheet.
+
+==============================================================
+TAB 1: PRODUCTS (Main Inventory Sheet)
+==============================================================
+
+COLUMNS (Row 1 = Headers):
+
+ID | Product Name | Bengali Name | Category | Brand | Unit | Opening Stock | Stock In | Stock Out | Current Stock | Unit Price (৳) | Total Value (৳) | Min Stock Alert | Status | Location
+
+SAMPLE DATA:
+
+ID,Product Name,Bengali Name,Category,Brand,Unit,Opening Stock,Stock In,Stock Out,Current Stock,Unit Price (৳),Total Value (৳),Min Stock Alert,Status,Location
+P001,RFL Plastic Door Standard,আরএফএল প্লাস্টিক দরজা,RFL Door,RFL,pcs,20,10,8,=G2+H2-I2,3500,=J2*K2,5,=IF(J2<=M2,"⚠ Low Stock","✓ OK"),Shelf A1
+P002,RFL Plastic Door Premium,আরএফএল প্রিমিয়াম দরজা,RFL Door,RFL,pcs,15,5,6,=G3+H3-I3,4200,=J3*K3,3,=IF(J3<=M3,"⚠ Low Stock","✓ OK"),Shelf A2
+P003,RFL Flush Door,আরএফএল ফ্লাশ দরজা,RFL Door,RFL,pcs,10,0,3,=G4+H4-I4,3800,=J4*K4,3,=IF(J4<=M4,"⚠ Low Stock","✓ OK"),Shelf A3
+P004,United PVC Door,ইউনাইটেড পিভিসি দরজা,PVC Door,United,pcs,25,10,12,=G5+H5-I5,2800,=J5*K5,5,=IF(J5<=M5,"⚠ Low Stock","✓ OK"),Shelf B1
+P005,Mustafa PVC Door,মোস্তফা পিভিসি দরজা,PVC Door,Mustafa,pcs,30,15,18,=G6+H6-I6,2500,=J6*K6,5,=IF(J6<=M6,"⚠ Low Stock","✓ OK"),Shelf B2
+P006,Solid Teak Door,সলিড সেগুন দরজা,Wooden Door,Local,pcs,8,2,1,=G7+H7-I7,8500,=J7*K7,2,=IF(J7<=M7,"⚠ Low Stock","✓ OK"),Showroom
+P007,Wooden Door Frame,কাঠের ফ্রেম,Wooden Frame,Local,set,20,5,8,=G8+H8-I8,1800,=J8*K8,5,=IF(J8<=M8,"⚠ Low Stock","✓ OK"),Store
+P008,RFL Casement Window,আরএফএল জানালা,Window,RFL,pcs,30,10,14,=G9+H9-I9,1500,=J9*K9,5,=IF(J9<=M9,"⚠ Low Stock","✓ OK"),Shelf C1
+P009,Jalousie Window,জালুসি জানালা,Window,Local,pcs,15,0,5,=G10+H10-I10,900,=J10*K10,3,=IF(J10<=M10,"⚠ Low Stock","✓ OK"),Shelf C2
+P010,PVC Foam Board 4x8ft,পিভিসি বোর্ড ৪x৮,Board,Local,sheet,50,20,25,=G11+H11-I11,650,=J11*K11,10,=IF(J11<=M11,"⚠ Low Stock","✓ OK"),Warehouse
+
+TOTAL INVENTORY VALUE (add this formula in a cell below):
+=SUMIF(N2:N100,"✓ OK",L2:L100)+SUMIF(N2:N100,"⚠ Low Stock",L2:L100)
+
+Or simpler — just sum the whole column:
+=SUM(L2:L100)
+
+
+==============================================================
+TAB 2: STOCK IN (When you receive new stock)
+==============================================================
+
+Date,Product ID,Product Name,Quantity Received,Unit Cost (৳),Total Cost (৳),Supplier,Invoice No.,Notes
+2025-01-15,P001,RFL Plastic Door Standard,10,3200,=D2*E2,RFL Depot Dhaka,INV-001,New shipment
+2025-01-15,P002,RFL Plastic Door Premium,5,4000,=D3*E3,RFL Depot Dhaka,INV-001,New shipment
+2025-01-20,P004,United PVC Door,10,2600,=D4*E4,United Depot,INV-002,
+2025-01-22,P007,Wooden Door Frame,5,1700,=D5*E5,Local Sawmill,,Paid cash
+
+→ After adding a Stock In row, go to TAB 1 and UPDATE the "Stock In" column (H) for that product.
+
+
+==============================================================
+TAB 3: STOCK OUT / SALES (When you sell)
+==============================================================
+
+Date,Memo No.,Customer Name,Product ID,Product Name,Qty Sold,Selling Price (৳),Total Sale (৳),Payment,Paid Amount (৳),Due (৳),Notes
+2025-01-16,001,Mr. Karim,P001,RFL Plastic Door Standard,2,3500,=G2*F2,Cash,=H2,=I2-J2,
+2025-01-17,002,Rahim Mia,P004,United PVC Door,3,2800,=G3*F3,Due,2000,=I3-J3,Pay by Feb
+2025-01-18,003,Sumon,P006,Solid Teak Door,1,8500,=G4*F4,Cash,=H4,0,
+2025-01-19,004,Local Builder,P010,PVC Foam Board,10,650,=G5*F5,Cash,=H5,0,Bulk buy
+
+→ After adding a Stock Out row, UPDATE the "Stock Out" column (I) in TAB 1.
+
+
+==============================================================
+TAB 4: DAILY SUMMARY (Dashboard)
+==============================================================
+
+Add these in Google Sheets cells manually:
+
+Cell A1: "Date"                   Cell B1: =TODAY()
+Cell A2: "Total Products"         Cell B2: =COUNTA(Products!A2:A100)
+Cell A3: "Total Stock Value"      Cell B3: =SUM(Products!L2:L100)
+Cell A4: "Low Stock Items"        Cell B4: =COUNTIF(Products!N2:N100,"⚠ Low Stock")
+Cell A5: "Today's Total Sales"    Cell B5: =SUMIF('Stock Out'!A2:A100,TODAY(),'Stock Out'!H2:H100)
+Cell A6: "Total Due (all time)"   Cell B6: =SUM('Stock Out'!K2:K100)
+Cell A7: "This Month Sales"       Cell B7: =SUMPRODUCT((MONTH('Stock Out'!A2:A100)=MONTH(TODAY()))*('Stock Out'!H2:H100))
+
+
+==============================================================
+CONDITIONAL FORMATTING RULES (Apply in Google Sheets):
+==============================================================
+
+1. Select column N (Status) in TAB 1
+   → Format > Conditional formatting
+   → Text contains "⚠ Low Stock" → Red background, white text
+   → Text contains "✓ OK"        → Green background, dark text
+
+2. Select column J (Current Stock) in TAB 1
+   → Format > Conditional formatting
+   → Less than or equal to column M → Red bold text
+
+
+==============================================================
+HOW TO UPDATE STOCK DAILY (Simple routine):
+==============================================================
+
+WHEN YOU SELL (Stock goes out):
+  1. Open TAB 3 (Stock Out) → Add a new row with today's date, customer, product, qty, price
+  2. Go to TAB 1 → Find that product → Increase "Stock Out" (column I) by the qty sold
+  3. Current Stock (column J) auto-updates via formula ✓
+
+WHEN STOCK ARRIVES (New delivery):
+  1. Open TAB 2 (Stock In) → Add a row with date, product, qty received, cost
+  2. Go to TAB 1 → Find that product → Increase "Stock In" (column H) by the qty received
+  3. Current Stock (column J) auto-updates via formula ✓
+
+CHECK DAILY:
+  → Look at TAB 4 (Daily Summary) every morning
+  → Any "⚠ Low Stock" alerts in TAB 1? Reorder that product!
+
+
+==============================================================
+GOOGLE SHEETS SETUP STEPS:
+==============================================================
+
+1. Go to sheets.google.com → Click "+" New spreadsheet
+2. Rename it: "Unique Traders – Inventory 2025"
+3. Rename Sheet1 tab to "Products"
+4. Add 3 more tabs: "Stock In", "Stock Out", "Summary"
+5. Copy the column headers and sample rows from above into each sheet
+6. The formulas (starting with =) will work automatically in Google Sheets
+7. Share with yourself: File > Share > Add your Gmail > Editor access
+8. Bookmark the link for quick daily access
+
+TIP: Use Google Sheets on your phone (free app) to update stock
+     from the shop floor without opening a computer!
