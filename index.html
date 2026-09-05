@@ -1,352 +1,117 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Unique Traders – ইউনিক ট্রেডার্স | Tangail</title>
-  <meta name="description" content="RFL & Wooden Door Distributor in Tangail. ইউনিক ট্রেডার্স – আপনার বিশ্বস্ত দরজা ও নির্মাণ সামগ্রীর দোকান।" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Noto+Sans+Bengali:wght@400;600;700&family=Barlow:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unique Traders | Inventory Management</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%232563eb%22/><text x=%2250%22 y=%2266%22 font-size=%2260%22 text-anchor=%22middle%22 fill=%22white%22 font-family=%22Arial%22>U</text></svg>">
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-  <!-- ── NAVBAR ─────────────────────────────────────────────── -->
-  <nav id="navbar">
-    <div class="nav-inner">
-      <a href="#" class="logo-mark">
-        <span class="logo-ut">UT</span>
-        <span class="logo-text">
-          <span class="bn">ইউনিক ট্রেডার্স</span>
-          <span class="en">UNIQUE TRADERS</span>
-        </span>
-      </a>
-
-      <ul class="nav-links">
-        <li><a href="#hero"    data-en="Home"     data-bn="হোম">Home</a></li>
-        <li><a href="#products" data-en="Products" data-bn="পণ্য">Products</a></li>
-        <li><a href="#about"   data-en="About"    data-bn="আমরা">About</a></li>
-        <li><a href="#contact" data-en="Contact"  data-bn="যোগাযোগ">Contact</a></li>
-      </ul>
-
-      <div class="nav-right">
-        <button class="lang-toggle" id="langBtn" onclick="toggleLang()">বাংলা</button>
-        <button class="hamburger" id="hamburger" onclick="toggleMenu()">
-          <span></span><span></span><span></span>
-        </button>
-      </div>
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="brand-mark">UT</div>
+      <h1>Unique Traders</h1>
+      <p>Inventory Management System</p>
     </div>
-
-    <ul class="mobile-menu" id="mobileMenu">
-      <li><a href="#hero"     onclick="toggleMenu()" data-en="Home"     data-bn="হোম">Home</a></li>
-      <li><a href="#products" onclick="toggleMenu()" data-en="Products" data-bn="পণ্য">Products</a></li>
-      <li><a href="#about"    onclick="toggleMenu()" data-en="About"    data-bn="আমরা">About</a></li>
-      <li><a href="#contact"  onclick="toggleMenu()" data-en="Contact"  data-bn="যোগাযোগ">Contact</a></li>
-    </ul>
-  </nav>
-
-  <!-- ── HERO ──────────────────────────────────────────────── -->
-  <section id="hero">
-    <div class="hero-bg-pattern"></div>
-    <div class="hero-content">
-      <div class="hero-badge" data-en="RFL Authorized Distributor · Tangail" data-bn="আরএফএল অনুমোদিত ডিলার · টাংগাইল">
-        RFL Authorized Distributor · Tangail
+    <form id="login-form" class="login-form">
+      <div class="field">
+        <label for="login-username">Username</label>
+        <input id="login-username" type="text" autocomplete="username" placeholder="e.g. admin" required>
       </div>
-      <h1 class="hero-title">
-        <span class="line en-text">Your Dream Door,</span>
-        <span class="line en-text accent">In Our Hands.</span>
-        <span class="line bn-text hidden">আপনার স্বপ্নের দরজা,</span>
-        <span class="line bn-text hidden accent">আমাদের হাতে।</span>
-      </h1>
-      <p class="hero-sub" data-en="Premium RFL, United & Mustafa PVC doors. Wooden doors, frames, windows & board materials — all under one roof in Tangail." data-bn="আরএফএল, ইউনাইটেড ও মোস্তফা পিভিসি দরজা। কাঠের দরজা, ফ্রেম, জানালা ও বোর্ড সামগ্রী — সবকিছু এক ছাদের নিচে।">
-        Premium RFL, United &amp; Mustafa PVC doors. Wooden doors, frames, windows &amp; board materials — all under one roof in Tangail.
-      </p>
-      <div class="hero-cta">
-        <a href="#products" class="btn-primary" data-en="View Products" data-bn="পণ্য দেখুন">View Products</a>
-        <a href="#contact"  class="btn-outline" data-en="Call Us Now"   data-bn="এখনই কল করুন">Call Us Now</a>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" required>
       </div>
-      <div class="hero-phones">
-        <a href="tel:01711206261">📞 01711-206261</a>
-        <span class="divider">|</span>
-        <a href="tel:01915039277">📞 01915-039277</a>
-      </div>
+      <div id="login-error" class="login-error" hidden></div>
+      <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+    </form>
+    <div class="login-hint">
+      <strong>Demo accounts</strong>
+      <div class="hint-row"><span>Admin</span><code>admin / admin123</code></div>
+      <div class="hint-row"><span>Staff</span><code>staff / staff123</code></div>
     </div>
-    <div class="hero-visual">
-      <div class="door-svg-wrap">
-        <svg viewBox="0 0 220 300" xmlns="http://www.w3.org/2000/svg">
-          <!-- door frame -->
-          <rect x="10" y="10" width="200" height="280" rx="4" fill="#1a0a00" stroke="#8B1a1a" stroke-width="2"/>
-          <!-- door panel outer -->
-          <rect x="22" y="22" width="176" height="256" rx="3" fill="#1c0c02" stroke="#c0392b" stroke-width="1.5"/>
-          <!-- top panel -->
-          <rect x="36" y="36"  width="148" height="90" rx="2" fill="#241208" stroke="#d4a017" stroke-width="1"/>
-          <!-- bottom panel -->
-          <rect x="36" y="142" width="148" height="122" rx="2" fill="#241208" stroke="#d4a017" stroke-width="1"/>
-          <!-- decorative top cross -->
-          <line x1="110" y1="36"  x2="110" y2="126" stroke="#d4a017" stroke-width="0.5" opacity="0.5"/>
-          <line x1="36"  y1="81"  x2="184" y2="81"  stroke="#d4a017" stroke-width="0.5" opacity="0.5"/>
-          <!-- knob -->
-          <circle cx="165" cy="210" r="7" fill="#d4a017"/>
-          <circle cx="165" cy="210" r="4" fill="#1a0a00"/>
-          <!-- UT monogram inside door -->
-          <text x="110" y="90"  text-anchor="middle" font-size="28" font-weight="900" fill="#c0392b" font-family="serif" opacity="0.8">UT</text>
-          <!-- hinge marks -->
-          <rect x="22" y="50"  width="8" height="20" rx="1" fill="#d4a017" opacity="0.6"/>
-          <rect x="22" y="215" width="8" height="20" rx="1" fill="#d4a017" opacity="0.6"/>
-        </svg>
-      </div>
-      <div class="floating-badge fb1" data-en="RFL Certified" data-bn="আরএফএল সার্টিফাইড">RFL Certified</div>
-      <div class="floating-badge fb2" data-en="10+ Years" data-bn="১০+ বছর">10+ Years</div>
-    </div>
-  </section>
-
-  <!-- ── TRUST BAR ──────────────────────────────────────────── -->
-  <div class="trust-bar">
-    <div class="trust-item"><span class="ti-icon">🏆</span><span data-en="RFL Authorized Dealer" data-bn="আরএফএল অনুমোদিত ডিলার">RFL Authorized Dealer</span></div>
-    <div class="trust-sep"></div>
-    <div class="trust-item"><span class="ti-icon">🚪</span><span data-en="100+ Door Varieties" data-bn="১০০+ ধরনের দরজা">100+ Door Varieties</span></div>
-    <div class="trust-sep"></div>
-    <div class="trust-item"><span class="ti-icon">📍</span><span data-en="Tangail, Bangladesh" data-bn="টাংগাইল, বাংলাদেশ">Tangail, Bangladesh</span></div>
-    <div class="trust-sep"></div>
-    <div class="trust-item"><span class="ti-icon">✅</span><span data-en="Trusted Since Day One" data-bn="শুরু থেকেই বিশ্বস্ত">Trusted Since Day One</span></div>
   </div>
+</div>
 
-  <!-- ── PRODUCTS ──────────────────────────────────────────── -->
-  <section id="products">
-    <div class="section-inner">
-      <div class="section-label" data-en="What We Sell" data-bn="আমাদের পণ্য">What We Sell</div>
-      <h2 class="section-title">
-        <span class="en-text" data-en="Our Products">Our Products</span>
-        <span class="bn-text hidden">আমাদের পণ্যসমূহ</span>
-      </h2>
-      <p class="section-sub" data-en="From premium PVC to solid hardwood — we carry the finest doors and construction materials available in Tangail." data-bn="প্রিমিয়াম পিভিসি থেকে শুরু করে শক্ত কাঠের দরজা — টাংগাইলে সেরা মানের দরজা ও নির্মাণ সামগ্রী আমাদের কাছে পাওয়া যায়।">
-        From premium PVC to solid hardwood — we carry the finest doors and construction materials available in Tangail.
-      </p>
+<!-- ===== APP SHELL ===== -->
+<div id="app-shell" class="app-shell" hidden>
 
-      <div class="products-grid">
-
-        <div class="product-card" style="--delay:0s">
-          <div class="pc-icon">
-            <svg viewBox="0 0 60 60" width="52" height="52">
-              <rect x="8" y="4" width="44" height="52" rx="2" fill="#c0392b" opacity="0.15" stroke="#c0392b" stroke-width="1.5"/>
-              <rect x="14" y="10" width="32" height="18" rx="1" fill="#c0392b" opacity="0.2" stroke="#c0392b" stroke-width="1"/>
-              <rect x="14" y="33" width="32" height="18" rx="1" fill="#c0392b" opacity="0.2" stroke="#c0392b" stroke-width="1"/>
-              <circle cx="42" cy="42" r="3" fill="#d4a017"/>
-            </svg>
-          </div>
-          <h3 data-en="RFL Plastic Doors" data-bn="আরএফএল প্লাস্টিক দরজা">RFL Plastic Doors</h3>
-          <p data-en="Bangladesh's most trusted PVC door brand. Waterproof, termite-proof, and long-lasting." data-bn="বাংলাদেশের সবচেয়ে বিশ্বস্ত পিভিসি দরজা। ওয়াটারপ্রুফ, উইপোকামুক্ত এবং দীর্ঘস্থায়ী।">
-            Bangladesh's most trusted PVC door brand. Waterproof, termite-proof, and long-lasting.
-          </p>
-          <span class="pc-tag" data-en="Authorized Dealer" data-bn="অনুমোদিত ডিলার">Authorized Dealer</span>
-        </div>
-
-        <div class="product-card" style="--delay:0.1s">
-          <div class="pc-icon">
-            <svg viewBox="0 0 60 60" width="52" height="52">
-              <rect x="6" y="4" width="48" height="52" rx="2" fill="#d4a017" opacity="0.15" stroke="#d4a017" stroke-width="1.5"/>
-              <rect x="12" y="10" width="36" height="36" rx="1" fill="#d4a017" opacity="0.15" stroke="#d4a017" stroke-width="1"/>
-              <line x1="30" y1="10" x2="30" y2="46" stroke="#d4a017" stroke-width="1" opacity="0.5"/>
-              <circle cx="38" cy="28" r="3" fill="#d4a017"/>
-            </svg>
-          </div>
-          <h3 data-en="Wooden Doors & Frames" data-bn="কাঠের দরজা ও ফ্রেম">Wooden Doors &amp; Frames</h3>
-          <p data-en="Solid wood and engineered timber doors with custom frames. Built to last for generations." data-bn="সলিড কাঠ ও ইঞ্জিনিয়ারড টিম্বার দরজা। কাস্টম ফ্রেমসহ। প্রজন্মের পর প্রজন্ম টেকসই।">
-            Solid wood and engineered timber doors with custom frames. Built to last for generations.
-          </p>
-          <span class="pc-tag gold" data-en="Premium Quality" data-bn="প্রিমিয়াম মান">Premium Quality</span>
-        </div>
-
-        <div class="product-card" style="--delay:0.2s">
-          <div class="pc-icon">
-            <svg viewBox="0 0 60 60" width="52" height="52">
-              <rect x="5"  y="8"  width="22" height="28" rx="2" fill="#c0392b" opacity="0.15" stroke="#c0392b" stroke-width="1.5"/>
-              <rect x="33" y="8"  width="22" height="28" rx="2" fill="#c0392b" opacity="0.15" stroke="#c0392b" stroke-width="1.5"/>
-              <rect x="5"  y="40" width="50" height="12" rx="2" fill="#c0392b" opacity="0.1"  stroke="#c0392b" stroke-width="1"/>
-              <circle cx="28" cy="22" r="2.5" fill="#d4a017"/>
-              <circle cx="32" cy="22" r="2.5" fill="#d4a017"/>
-            </svg>
-          </div>
-          <h3 data-en="Windows & Jalousie" data-bn="জানালা ও জালুসি">Windows &amp; Jalousie</h3>
-          <p data-en="RFL windows, fixed panels, and jalousie options in various sizes for homes and offices." data-bn="আরএফএল জানালা, ফিক্সড প্যানেল এবং বাড়ি ও অফিসের জন্য বিভিন্ন সাইজের জালুসি।">
-            RFL windows, fixed panels, and jalousie options in various sizes for homes and offices.
-          </p>
-          <span class="pc-tag" data-en="All Sizes" data-bn="সব সাইজ">All Sizes</span>
-        </div>
-
-        <div class="product-card" style="--delay:0.3s">
-          <div class="pc-icon">
-            <svg viewBox="0 0 60 60" width="52" height="52">
-              <rect x="8"  y="6"  width="44" height="8" rx="2" fill="#d4a017" opacity="0.3" stroke="#d4a017" stroke-width="1"/>
-              <rect x="8"  y="20" width="44" height="8" rx="2" fill="#d4a017" opacity="0.3" stroke="#d4a017" stroke-width="1"/>
-              <rect x="8"  y="34" width="44" height="8" rx="2" fill="#d4a017" opacity="0.3" stroke="#d4a017" stroke-width="1"/>
-              <rect x="8"  y="48" width="44" height="8" rx="2" fill="#d4a017" opacity="0.3" stroke="#d4a017" stroke-width="1"/>
-            </svg>
-          </div>
-          <h3 data-en="PVC & Plastic Boards" data-bn="পিভিসি ও প্লাস্টিক বোর্ড">PVC &amp; Plastic Boards</h3>
-          <p data-en="Lightweight PVC boards for interior partitions, ceilings, and finishing work. Moisture-resistant." data-bn="অভ্যন্তরীণ পার্টিশন, ছাদ ও ফিনিশিং কাজের জন্য হালকা পিভিসি বোর্ড। আর্দ্রতারোধী।">
-            Lightweight PVC boards for interior partitions, ceilings, and finishing work. Moisture-resistant.
-          </p>
-          <span class="pc-tag gold" data-en="Bulk Available" data-bn="পাইকারি পাওয়া যায়">Bulk Available</span>
-        </div>
-
-        <div class="product-card" style="--delay:0.4s">
-          <div class="pc-icon">
-            <svg viewBox="0 0 60 60" width="52" height="52">
-              <rect x="10" y="4" width="40" height="52" rx="2" fill="#c0392b" opacity="0.12" stroke="#c0392b" stroke-width="1.5"/>
-              <text x="30" y="36" text-anchor="middle" font-size="22" font-weight="900" fill="#c0392b" opacity="0.7" font-family="serif">U</text>
-            </svg>
-          </div>
-          <h3 data-en="United PVC Doors" data-bn="ইউনাইটেড পিভিসি দরজা">United PVC Doors</h3>
-          <p data-en="Durable United brand PVC doors in multiple designs — ideal for bathrooms, kitchens, and bedrooms." data-bn="একাধিক ডিজাইনে টেকসই ইউনাইটেড ব্র্যান্ডের পিভিসি দরজা — বাথরুম, রান্নাঘর ও শোবার ঘরের জন্য আদর্শ।">
-            Durable United brand PVC doors in multiple designs — ideal for bathrooms, kitchens, and bedrooms.
-          </p>
-          <span class="pc-tag" data-en="In Stock" data-bn="স্টকে আছে">In Stock</span>
-        </div>
-
-        <div class="product-card" style="--delay:0.5s">
-          <div class="pc-icon">
-            <svg viewBox="0 0 60 60" width="52" height="52">
-              <rect x="10" y="4" width="40" height="52" rx="2" fill="#d4a017" opacity="0.12" stroke="#d4a017" stroke-width="1.5"/>
-              <text x="30" y="36" text-anchor="middle" font-size="22" font-weight="900" fill="#d4a017" opacity="0.7" font-family="serif">M</text>
-            </svg>
-          </div>
-          <h3 data-en="Mustafa PVC Doors" data-bn="মোস্তফা পিভিসি দরজা">Mustafa PVC Doors</h3>
-          <p data-en="Mustafa brand PVC doors with stylish finishes at affordable prices — a favorite for budget-conscious buyers." data-bn="সাশ্রয়ী মূল্যে মোস্তফা ব্র্যান্ডের স্টাইলিশ পিভিসি দরজা — বাজেট সচেতন ক্রেতাদের পছন্দ।">
-            Mustafa brand PVC doors with stylish finishes at affordable prices — a favorite for budget-conscious buyers.
-          </p>
-          <span class="pc-tag gold" data-en="Best Value" data-bn="সেরা দাম">Best Value</span>
-        </div>
-
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark small">UT</div>
+      <div class="brand-text">
+        <strong>Unique Traders</strong>
+        <span>Inventory System</span>
       </div>
+      <button id="sidebar-close" class="icon-btn only-mobile" aria-label="Close menu">✕</button>
     </div>
-  </section>
-
-  <!-- ── ABOUT ──────────────────────────────────────────────── -->
-  <section id="about">
-    <div class="section-inner about-inner">
-      <div class="about-text">
-        <div class="section-label" data-en="Our Story" data-bn="আমাদের পরিচয়">Our Story</div>
-        <h2 class="section-title left">
-          <span class="en-text">Built on Trust,<br/>Delivered with Care.</span>
-          <span class="bn-text hidden">বিশ্বাসের উপর গড়া,<br/>যত্নের সাথে পৌঁছে দেওয়া।</span>
-        </h2>
-        <p data-en="Unique Traders has been Tangail's go-to destination for premium doors and construction materials. Located at Purba Adalat Para, Chourasta Mor, we stock RFL, United, and Mustafa PVC doors alongside quality wooden doors, frames, and board materials — everything you need to finish your home beautifully." data-bn="ইউনিক ট্রেডার্স দীর্ঘদিন ধরে টাংগাইলে প্রিমিয়াম দরজা ও নির্মাণ সামগ্রীর বিশ্বস্ত ঠিকানা। পূর্ব আদালত পাড়া, চৌরাস্তা মোড়ে অবস্থিত আমাদের দোকানে আরএফএল, ইউনাইটেড ও মোস্তফা পিভিসি দরজার পাশাপাশি কাঠের দরজা, ফ্রেম এবং বোর্ড সামগ্রী পাওয়া যায়।">
-          Unique Traders has been Tangail's go-to destination for premium doors and construction materials. Located at Purba Adalat Para, Chourasta Mor, we stock RFL, United, and Mustafa PVC doors alongside quality wooden doors, frames, and board materials — everything you need to finish your home beautifully.
-        </p>
-
-        <div class="about-owner">
-          <div class="owner-avatar">GA</div>
-          <div>
-            <strong>Gazi Md Abdulla Al Mahbub</strong>
-            <span data-en="Proprietor, Unique Traders" data-bn="স্বত্বাধিকারী, ইউনিক ট্রেডার্স">Proprietor, Unique Traders</span>
-          </div>
-        </div>
-
-        <div class="about-stats">
-          <div class="stat"><span class="sn">100+</span><span class="sl" data-en="Products" data-bn="পণ্য">Products</span></div>
-          <div class="stat"><span class="sn">3</span><span class="sl" data-en="Top Brands" data-bn="শীর্ষ ব্র্যান্ড">Top Brands</span></div>
-          <div class="stat"><span class="sn">✓</span><span class="sl" data-en="RFL Certified" data-bn="আরএফএল সার্টিফাইড">RFL Certified</span></div>
-        </div>
-      </div>
-
-      <div class="about-visual">
-        <div class="av-card av1">
-          <div class="av-inner">
-            <span class="av-icon">🏆</span>
-            <strong data-en="RFL Authorized" data-bn="আরএফএল অনুমোদিত">RFL Authorized</strong>
-            <small data-en="Official distributor" data-bn="অফিসিয়াল ডিস্ট্রিবিউটর">Official distributor</small>
-          </div>
-        </div>
-        <div class="av-card av2">
-          <div class="av-inner">
-            <span class="av-icon">📦</span>
-            <strong data-en="Always In Stock" data-bn="সবসময় স্টকে">Always In Stock</strong>
-            <small data-en="Ready for you" data-bn="আপনার জন্য প্রস্তুত">Ready for you</small>
-          </div>
-        </div>
-        <div class="av-card av3">
-          <div class="av-inner">
-            <span class="av-icon">💬</span>
-            <strong data-en="Expert Advice" data-bn="বিশেষজ্ঞ পরামর্শ">Expert Advice</strong>
-            <small data-en="We help you choose" data-bn="সঠিক পছন্দে সাহায্য">We help you choose</small>
-          </div>
-        </div>
-      </div>
+    <nav id="nav-list" class="nav-list"></nav>
+    <div class="sidebar-footer">
+      <span class="version-tag">v1.0 · Local Data</span>
     </div>
-  </section>
+  </aside>
 
-  <!-- ── CONTACT ────────────────────────────────────────────── -->
-  <section id="contact">
-    <div class="section-inner">
-      <div class="section-label" data-en="Get In Touch" data-bn="যোগাযোগ করুন">Get In Touch</div>
-      <h2 class="section-title">
-        <span class="en-text">Visit Us or Call Today</span>
-        <span class="bn-text hidden">আজই আসুন বা কল করুন</span>
-      </h2>
+  <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 
-      <div class="contact-grid">
-
-        <div class="contact-card">
-          <div class="cc-icon">📍</div>
-          <h4 data-en="Our Location" data-bn="আমাদের ঠিকানা">Our Location</h4>
-          <p data-en="Purba Adalat Para (Chourasta Mor), Tangail, Bangladesh" data-bn="পূর্ব আদালত পাড়া (চৌরাস্তা মোড়), টাংগাইল, বাংলাদেশ">
-            Purba Adalat Para (Chourasta Mor),<br/>Tangail, Bangladesh
-          </p>
-          <a href="https://www.google.com/maps/search/Purba+Adalat+Para+Tangail" target="_blank" class="cc-link" data-en="Get Directions →" data-bn="দিকনির্দেশনা →">Get Directions →</a>
+  <div class="main-col">
+    <header class="topbar">
+      <button id="menu-toggle" class="icon-btn only-mobile" aria-label="Open menu">☰</button>
+      <h2 id="page-title">Dashboard</h2>
+      <div class="topbar-right">
+        <button id="theme-toggle" class="icon-btn" aria-label="Toggle theme" title="Toggle dark mode">🌙</button>
+        <div class="user-chip" id="user-chip">
+          <div class="user-avatar" id="user-avatar">A</div>
+          <div class="user-meta">
+            <strong id="user-name">—</strong>
+            <span id="user-role">—</span>
+          </div>
         </div>
-
-        <div class="contact-card featured">
-          <div class="cc-icon">📞</div>
-          <h4 data-en="Call Us Now" data-bn="এখনই কল করুন">Call Us Now</h4>
-          <a href="tel:01711206261" class="phone-link">01711-206261</a>
-          <a href="tel:01915039277" class="phone-link">01915-039277</a>
-          <p class="hours" data-en="Open Sat – Thu · 9 AM – 8 PM" data-bn="শনি – বৃহস্পতি · সকাল ৯টা – রাত ৮টা">Open Sat – Thu · 9 AM – 8 PM</p>
-        </div>
-
-        <div class="contact-card">
-          <div class="cc-icon">📘</div>
-          <h4 data-en="Follow Us" data-bn="আমাদের অনুসরণ করুন">Follow Us</h4>
-          <p data-en="Stay updated with new arrivals and offers on our Facebook page." data-bn="আমাদের ফেসবুক পেজে নতুন পণ্য ও অফার সম্পর্কে আপডেট থাকুন।">
-            Stay updated with new arrivals and offers on our Facebook page.
-          </p>
-          <a href="https://www.facebook.com/profile.php?id=100076012377226" target="_blank" class="cc-link">Facebook Page →</a>
-        </div>
-
+        <button id="logout-btn" class="btn btn-ghost btn-sm">Log Out</button>
       </div>
+    </header>
 
-      <div class="map-embed">
-        <iframe
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3629.0!2d89.9167!3d24.2513!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zMjTCsDE1JzA0LjciTiA4OcKwNTUnMDAuMSJF!5e0!3m2!1sen!2sbd!4v1234567890"
-          width="100%" height="260" style="border:0;border-radius:8px;filter:grayscale(80%) invert(10%);"
-          allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Unique Traders Location">
-        </iframe>
-      </div>
-    </div>
-  </section>
+    <main id="page-content" class="page-content">
+      <!-- page content injected here -->
+    </main>
+  </div>
+</div>
 
-  <!-- ── FOOTER ─────────────────────────────────────────────── -->
-  <footer>
-    <div class="footer-inner">
-      <div class="footer-brand">
-        <span class="logo-ut small">UT</span>
-        <div>
-          <strong>ইউনিক ট্রেডার্স</strong>
-          <small data-en="Tangail's Trusted Door Supplier" data-bn="টাংগাইলের বিশ্বস্ত দরজা সরবরাহকারী">Tangail's Trusted Door Supplier</small>
-        </div>
-      </div>
-      <div class="footer-links">
-        <a href="#hero"     data-en="Home"     data-bn="হোম">Home</a>
-        <a href="#products" data-en="Products" data-bn="পণ্য">Products</a>
-        <a href="#about"    data-en="About"    data-bn="আমরা">About</a>
-        <a href="#contact"  data-en="Contact"  data-bn="যোগাযোগ">Contact</a>
-        <a href="https://www.facebook.com/profile.php?id=100076012377226" target="_blank">Facebook</a>
-      </div>
-      <p class="footer-copy">© 2025 Unique Traders · Tangail, Bangladesh</p>
-    </div>
-  </footer>
+<!-- ===== MODAL ROOT ===== -->
+<div id="modal-root"></div>
 
-  <script src="script.js"></script>
+<!-- ===== TOAST ROOT ===== -->
+<div id="toast-root" class="toast-root"></div>
+
+<!-- Chart.js from CDN (dashboard/report charts). App still works offline without it. -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+<!-- Core -->
+<script src="js/utils.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/real-catalog-data.js"></script>
+<script src="js/seed.js"></script>
+<script src="js/db.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/router.js"></script>
+
+<!-- Pages -->
+<script src="js/pages/login.js"></script>
+<script src="js/pages/dashboard.js"></script>
+<script src="js/pages/products.js"></script>
+<script src="js/pages/inventory.js"></script>
+<script src="js/pages/sales.js"></script>
+<script src="js/pages/customers.js"></script>
+<script src="js/pages/payments.js"></script>
+<script src="js/pages/reports.js"></script>
+<script src="js/pages/settings.js"></script>
+
+<!-- Bootstrap -->
+<script src="js/app.js"></script>
 </body>
 </html>

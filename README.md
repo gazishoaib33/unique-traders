@@ -1,97 +1,130 @@
-# ইউনিক ট্রেডার্স — Unique Traders Website
+# Unique Traders — Inventory Management (Web)
 
-**Official website for Unique Traders, Tangail, Bangladesh.**  
-RFL Authorized Distributor · Wooden & PVC Doors · Construction Materials
+A complete, self-contained inventory management web app for Unique Traders:
+products & variants, stock, sales (POS-style), customers, payments,
+dashboard, reports, settings, and role-based Admin/Staff access.
 
----
+No build step, no dependencies to install — plain HTML/CSS/JS. Data is
+stored in the browser via `localStorage`.
 
-## 📁 File Structure
+> This is a companion **web** app, separate from the existing Flutter
+> mobile app at `D:\Projects\unique_trader_inventory`. They are independent
+> projects with independent, unsynced data; nothing here touches the
+> Flutter codebase or its database.
 
-```
-unique-traders/
-├── index.html      ← Main homepage (Hero, Products, About, Contact)
-├── style.css       ← All styles (dark red/gold theme)
-├── script.js       ← Language toggle, scroll effects, interactions
-└── README.md       ← This file
-```
+## Real catalog, not demo data
 
----
+On first run this seeds your **actual product catalog** — 482 products /
+532 SKUs across 13 categories, imported from
+`unique_trader_catalogue_cleaned.xlsx` (the same source file the Flutter
+app was built from). Brand color, currency formatting (0 decimal places),
+and company name all match the Flutter app too. Customers, sales, and
+payments start **empty** — this is meant for real use, not a demo.
 
-## 🚀 How to Host on GitHub Pages (Free)
+- `js/real-catalog-data.js` is the generated data (regenerate it from the
+  spreadsheet any time your price list changes — ask Claude, or see the
+  transform logic that produced it).
+- 391 of the 532 SKUs had no recorded cost price in the spreadsheet; those
+  were estimated at 72% of selling price (flagged `costEstimated: true`
+  internally) so profit reports still work — correct them via Products →
+  edit → variant cost price as you get real numbers.
+- 88 real product photos were copied into `assets/products/` and matched
+  to their SKUs.
+- Settings → General still needs your real company address, phone, and
+  email — those weren't found anywhere in the Flutter project.
+- Settings → Data & Backup has **"Reload Starter Catalog"** (wipes
+  everything back to this imported baseline) and **"Start Fresh"** (wipes
+  to a truly empty workspace, no catalog at all) if you ever want either.
 
-### Step 1 — Create GitHub Repository
-1. Go to [github.com](https://github.com) and log in
-2. Click **"New Repository"** (green button)
-3. Name it: `unique-traders` *(or any name you like)*
-4. Set to **Public**
-5. Click **"Create Repository"**
+## Run it
 
-### Step 2 — Upload Files
-1. Click **"uploading an existing file"** link
-2. Drag and drop all 4 files: `index.html`, `style.css`, `script.js`, `README.md`
-3. Scroll down → Click **"Commit changes"**
+Just open [index.html](index.html) in a browser (double-click it, or
+right-click → Open with → your browser). Everything runs client-side.
 
-### Step 3 — Enable GitHub Pages
-1. Go to your repo → Click **Settings** tab
-2. Scroll to **"Pages"** section (left sidebar)
-3. Under **"Branch"**, select `main` → Click **Save**
-4. Wait 2–3 minutes → Your site will be live at:
-   ```
-   https://YOUR-GITHUB-USERNAME.github.io/unique-traders/
-   ```
+If your browser blocks local file access for any reason, serve it instead:
 
----
-
-## 🌐 Custom Domain (Optional, Later)
-Buy a `.com.bd` domain from [NIC.BD](https://www.nic.org.bd) or a `.com` from Namecheap.  
-Add a `CNAME` file with your domain name and configure DNS.
-
----
-
-## ✏️ How to Update Content
-
-### Change phone number
-Open `index.html` → Search for `01711-206261` → Replace with new number
-
-### Add a product
-Copy a `<div class="product-card">` block in `index.html` and edit the text
-
-### Change colors
-Open `style.css` → Edit the `:root` variables at the top:
-```css
---red:  #c0392b;   /* Main red color */
---gold: #d4a017;   /* Gold accent color */
+```bash
+python -m http.server 8000
 ```
 
----
+then visit `http://localhost:8000`.
 
-## 📱 Features
-- ✅ Bilingual (English + বাংলা) with toggle button
-- ✅ Mobile responsive (works on all phones)
-- ✅ Smooth scroll animations
-- ✅ Floating door illustration
-- ✅ Clickable phone numbers
-- ✅ Facebook page link
-- ✅ Google Maps embed
-- ✅ No frameworks needed — pure HTML/CSS/JS
+## Demo accounts
 
----
+| Role  | Username | Password  |
+|-------|----------|-----------|
+| Admin | `admin`  | `admin123`|
+| Staff | `staff`  | `staff123`|
 
-## 📞 Shop Info
-- **Owner:** Gazi Md Abdulla Al Mahbub
-- **Address:** Purba Adalat Para, Chourasta Mor, Tangail
-- **Phone:** 01711-206261 · 01915-039277
-- **Facebook:** [Unique Traders Page](https://www.facebook.com/profile.php?id=100076012377226)
+Admin has full access (products, inventory adjustments, users, settings,
+profit reports, cancelling sales). Staff can sell, manage customers,
+record payments, and view non-financial reports, but cannot edit the
+catalog, adjust stock, or see cost/profit figures.
 
----
+## Project layout
 
-## 🔮 Next Steps (Upgrades)
-1. **Inventory System** → Google Sheets with stock tracking
-2. **Billing System** → HTML cash memo generator
-3. **Product Gallery** → Real product photos
-4. **WhatsApp Button** → Floating chat button
-5. **Admin Dashboard** → Python/Streamlit backend
+```
+index.html            Shell markup (login screen + app shell)
+css/styles.css         Design system (light/dark theme via CSS variables)
+js/
+  utils.js             Generic helpers (formatting, CSV export, dates…)
+  storage.js            localStorage persistence — the ONLY file that
+                        touches localStorage directly (see below)
+  seed.js               First-run mock data generator
+  db.js                 Data / repository layer — every page talks to
+                        this, never to storage.js directly
+  auth.js                Mock local authentication + role permissions
+  ui.js                  Toasts, modals, confirm dialogs, badges
+  charts.js               Chart.js wrapper (dashboard/report charts)
+  router.js                Hash router + sidebar nav + role guards
+  app.js                    Bootstraps the app
+  pages/
+    login.js, dashboard.js, products.js, inventory.js, sales.js,
+    customers.js, payments.js, reports.js, settings.js
+```
 
----
+## Connecting Supabase later
 
-*Built with ❤️ for Unique Traders, Tangail*
+The data layer is deliberately split into two files so swapping the
+backend doesn't touch any page code:
+
+- **`js/db.js`** exposes the entire public API every page calls
+  (`DB.Products.list()`, `DB.Sales.create()`, `DB.Customers.balance()`,
+  etc.). Every function already returns a `Promise`, even though the
+  current implementation is synchronous — so pages already do
+  `await DB.Products.list()` the same way they would against Supabase.
+- **`js/storage.js`** is the only file that reads/writes `localStorage`.
+
+To migrate:
+1. Add the `@supabase/supabase-js` client (via the CDN allowlist or a
+   bundler if you introduce one).
+2. Re-implement the internals of each `DB.*` function in `js/db.js` to
+   call `supabase.from('products').select()` etc. instead of `col(...)`
+   / `Store`.
+3. Replace `js/auth.js`'s mock login with `supabase.auth.signInWithPassword`.
+4. Retire `js/storage.js` and `js/seed.js` once Supabase is the source
+   of truth (or keep `seed.js` as a one-time DB-seeding script).
+
+No page in `js/pages/` needs to change.
+
+## Data model notes
+
+- **Products** are the catalog entry (name, category, brand, description).
+  **Variants** hold price/cost/SKU/barcode/reorder level — every product
+  has at least one variant (a "Default" one if it has no real variants),
+  so stock and sales always operate at the variant level.
+- **Stock** is ledger-based: every purchase, sale, return, and manual
+  adjustment is an immutable entry in `stockLedger`; the current level is
+  always the sum of entries for that variant. This gives you a full
+  audit trail (see the 🕘 history icon on the Inventory page) for free.
+- **Sales** store line items + totals; paid/due amounts are derived from
+  the `payments` collection (linked via `saleId`), not stored redundantly.
+- **Customer balance** = sum of their non-cancelled sale totals minus
+  every payment recorded against them (sale-linked or standalone credit
+  payments).
+
+## Backup & reset
+
+Settings → Data & Backup lets you export the entire dataset as JSON,
+import a previous export, or wipe everything and regenerate fresh demo
+data — handy for demos or starting clean before connecting Supabase.
