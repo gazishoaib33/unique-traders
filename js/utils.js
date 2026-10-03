@@ -138,10 +138,29 @@
     return true;
   }
 
+  /** Lower-cases and normalises text for searching. Door sizes are written
+   *  many ways ("7 x 3.5", "7×3.5", "7X3.5") — all become "7x3.5". */
+  function normalizeSearch(str) {
+    return String(str ?? "")
+      .toLowerCase()
+      .replace(/[×*]/g, "x")
+      .replace(/(\d)\s*x\s*(?=\d)/g, "$1x")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  /** True when every word of `query` appears somewhere in `text`, in any
+   *  order — so "cosmic 7x3.5 left" finds "Cosmic Door Bronze — Left Hand". */
+  function matchesSearch(text, query) {
+    const haystack = normalizeSearch(text);
+    const words = normalizeSearch(query).split(" ").filter(Boolean);
+    return words.every((w) => haystack.includes(w));
+  }
+
   global.Utils = {
     uid, nowISO, todayISO, formatDate, formatDateTime,
     setCurrency, formatMoney, formatNumber, clamp, escapeHtml,
     debounce, downloadTextFile, toCSV, initials, sum, groupBy,
-    daysAgoISO, inRange, startOfDay, endOfDay,
+    daysAgoISO, inRange, startOfDay, endOfDay, normalizeSearch, matchesSearch,
   };
 })(window);

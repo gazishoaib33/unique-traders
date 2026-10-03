@@ -11,6 +11,16 @@
         instead of Store, and return Promises (the async wrapper below
         already returns Promises, so calling code needs no changes).
      3. Retire this file once nothing references it.
+
+   Consistency rules (why this file looks the way it does):
+   - Writes are synchronous (no debounce), so a sale is on disk before
+     the UI says "Sale completed" and nothing is lost if the tab closes.
+   - Every mutation in db.js runs inside Store.transaction(): it re-reads
+     the latest data from localStorage first (so a second open tab can't
+     overwrite this tab's sales with a stale copy), applies the change,
+     and persists once. If the change throws or the write fails, the
+     in-memory state is rolled back to what is on disk — no half-applied
+     sales or stock movements.
    ===================================================================== */
 (function (global) {
   "use strict";
@@ -35,7 +45,6 @@
       return true;
     } catch (e) {
       console.error("Storage write failed", e);
-      if (global.UI) global.UI.toast("error", "Storage full", "Could not save — browser storage may be full.");
       return false;
     }
   }
@@ -50,15 +59,24 @@
     return data;
   }
 
-  function persist(data) {
-    return writeRaw(data);
+  // In-memory cache of what is on disk. Reads come from here; every
+  // mutation reloads it first (see transaction()).
+  let _state = load();
+  let _txDepth = 0;
+
+  function persistOrThrow() {
+    if (!writeRaw(_state)) {
+      _state = load(); // discard the unsaved change
+      throw new Error("Could not save — browser storage may be full. Nothing was changed.");
+    }
   }
 
-  // In-memory cache, single source of truth for the session. Every
-  // mutation goes through here then is (debounced) flushed to localStorage.
-  let _state = load();
-
-  const flush = Utils && Utils.debounce ? Utils.debounce(() => persist(_state), 120) : () => persist(_state);
+  // Another tab changed the data: refresh our cache so this tab sees it.
+  if (typeof global.addEventListener === "function") {
+    global.addEventListener("storage", (e) => {
+      if (e.key === KEY && _txDepth === 0) _state = load();
+    });
+  }
 
   const Store = {
     /** Get a full collection array (or {} for singleton collections). */
@@ -68,12 +86,37 @@
     },
     setCollection(name, value) {
       _state.collections[name] = value;
-      flush();
+      if (_txDepth === 0) persistOrThrow();
     },
-    /** Replace the entire DB (used by import/restore & seeding). */
+    /**
+     * Run fn() as one all-or-nothing unit against the latest saved data.
+     * Returns fn's result; rethrows (after rolling back) if fn throws or
+     * the result cannot be saved.
+     */
+    transaction(fn) {
+      if (_txDepth > 0) return fn(); // nested: the outer transaction commits
+      _state = load();
+      _txDepth++;
+      let result;
+      try {
+        result = fn();
+      } catch (e) {
+        _state = load(); // roll back in-memory changes
+        throw e;
+      } finally {
+        _txDepth--;
+      }
+      persistOrThrow();
+      return result;
+    },
+    /** Replace the entire DB (used by import/restore). */
     replaceAll(newState) {
+      const previous = _state;
       _state = newState;
-      persist(_state);
+      if (!writeRaw(_state)) {
+        _state = previous;
+        throw new Error("Could not save — browser storage may be full.");
+      }
     },
     /** Snapshot for export/backup. */
     snapshot() {
@@ -85,7 +128,7 @@
     },
     clearAll() {
       _state = { schemaVersion: SCHEMA_VERSION, collections: {} };
-      persist(_state);
+      writeRaw(_state);
     },
   };
 
