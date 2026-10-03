@@ -19,7 +19,7 @@
 
     root.innerHTML = `
       <div class="toolbar">
-        <div class="search-input"><input id="p-search" placeholder="Search name, SKU or barcode…"></div>
+        <div class="search-input"><input id="p-search" placeholder="Search name, size (7x3.5), variant, SKU or barcode…"></div>
         <select id="p-category" class="field-select">
           <option value="">All Categories</option>
           ${state.categories.map((c) => `<option value="${c.id}">${U.escapeHtml(c.name)}</option>`).join("")}
@@ -54,14 +54,15 @@
     let products = await DB.Products.list({ search: state.search, categoryId: state.categoryId });
     if (!state.showInactive) products = products.filter((p) => p.active);
     const catMap = Object.fromEntries(state.categories.map((c) => [c.id, c.name]));
+    const levels = DB.Stock.levelsMap();
 
     if (!products.length) { tbody.innerHTML = UI.emptyRow(canEdit ? 8 : 7, "No products found"); return; }
 
     tbody.innerHTML = products.map((p) => {
       const variants = DB.Variants.listByProduct(p.id);
       const activeVariants = variants.filter((v) => v.active);
-      const totalStock = activeVariants.reduce((a, v) => a + DB.Stock.getLevel(v.id), 0);
-      const lowest = Math.min(...activeVariants.map((v) => DB.Stock.getLevel(v.id) - (v.reorderLevel || 0)), 0);
+      const totalStock = activeVariants.reduce((a, v) => a + (levels[v.id] || 0), 0);
+      const lowest = Math.min(...activeVariants.map((v) => (levels[v.id] || 0) - (v.reorderLevel || 0)), 0);
       return `
         <tr>
           <td>${p.imageUrl
@@ -70,10 +71,10 @@
           </td>
           <td>
             <strong>${U.escapeHtml(p.name)}</strong>
-            <div class="muted mono" style="font-size:11.5px">${U.escapeHtml(p.sku)}</div>
+            <div class="muted" style="font-size:11.5px"><span class="mono">${U.escapeHtml(p.sku)}</span>${p.description ? ` · ${U.escapeHtml(p.description)}` : ""}</div>
           </td>
           <td>${U.escapeHtml(catMap[p.categoryId] || "—")}</td>
-          <td>${p.hasVariants ? `${activeVariants.length} variants` : "Single"}</td>
+          <td style="font-size:12px">${activeVariants.length > 1 || p.hasVariants ? activeVariants.map((v) => `${U.escapeHtml(v.name)}: <strong>${levels[v.id] || 0}</strong>`).join("<br>") : "Single"}</td>
           <td class="text-right">${UI.badge(totalStock, lowest < 0 ? "warning" : "neutral")}</td>
           <td class="text-right mono">${priceRangeLabel(activeVariants)}</td>
           <td>${p.active ? UI.badge("Active", "success") : UI.badge("Archived", "neutral")}</td>
@@ -88,9 +89,11 @@
     tbody.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openProductModal(b.dataset.edit)));
     tbody.querySelectorAll("[data-archive]").forEach((b) => b.addEventListener("click", async () => {
       const p = await DB.Products.get(b.dataset.archive);
-      await DB.Products.archive(p.id, !p.active);
-      UI.toast("success", p.active ? "Archived" : "Restored", p.name);
-      renderTable();
+      try {
+        await DB.Products.archive(p.id, !p.active);
+        UI.toast("success", p.active ? "Archived" : "Restored", p.name);
+        renderTable();
+      } catch (err) { UI.toast("error", "Could not update product", err.message); }
     }));
     tbody.querySelectorAll("[data-delete]").forEach((b) => b.addEventListener("click", () => {
       UI.confirmDialog({
@@ -107,6 +110,10 @@
   // Add / Edit modal
   // ---------------------------------------------------------------
   let rowSeq = 0;
+  const VARIANT_HEAD = `
+      <div class="variant-row variant-head">
+        <span>Variant (e.g. Left Hand)</span><span>SKU (auto if blank)</span><span>Barcode</span><span>Cost</span><span>Sell price</span><span>Opening stock</span><span>Reorder at</span><span></span>
+      </div>`;
   function variantRowHTML(v) {
     rowSeq++;
     const rid = `vr_${rowSeq}`;
@@ -114,13 +121,15 @@
     const stock = isExisting ? DB.Stock.getLevel(v.id) : null;
     return `
       <div class="variant-row" data-row-id="${rid}" data-variant-id="${v.id || ""}">
-        <input class="v-name" placeholder="e.g. Red / L or Default" value="${U.escapeHtml(v.name || "")}">
+        <input class="v-name" placeholder="Variant, e.g. Left Hand" value="${U.escapeHtml(v.name || "")}">
+        <input class="v-sku" placeholder="SKU (auto)" value="${U.escapeHtml(v.sku || "")}">
+        <input class="v-barcode" placeholder="Barcode" value="${U.escapeHtml(v.barcode || "")}">
         <input class="v-cost" type="number" min="0" step="0.01" placeholder="Cost" value="${v.costPrice ?? ""}">
         <input class="v-sell" type="number" min="0" step="0.01" placeholder="Sell price" value="${v.sellingPrice ?? ""}">
         ${isExisting
-          ? `<input type="text" value="${stock} in stock" disabled title="Adjust via Inventory page">`
+          ? `<input type="text" value="${stock} in stock" disabled title="Change stock on the Inventory page">`
           : `<input class="v-stock" type="number" min="0" step="1" placeholder="Opening stock" value="${v.openingStock ?? 0}">`}
-        <input class="v-reorder" type="number" min="0" step="1" placeholder="Reorder" value="${v.reorderLevel ?? 10}">
+        <input class="v-reorder" type="number" min="0" step="1" placeholder="Reorder at" value="${v.reorderLevel ?? 10}">
         <button type="button" class="icon-btn" data-remove-row title="Remove">✕</button>
       </div>`;
   }
@@ -151,13 +160,16 @@
           <div class="field"><label>Brand</label><input id="pf-brand" placeholder="Unique Traders"></div>
           <div class="field"><label>Unit</label><input id="pf-unit" placeholder="pcs, kg, box…" value="pcs"></div>
         </div>
-        <div class="field"><label>Description</label><textarea id="pf-desc" rows="2"></textarea></div>
+        <div class="field"><label>Description / Size</label><textarea id="pf-desc" rows="2" placeholder="e.g. 7x3.5 feet — searchable"></textarea></div>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;margin:12px 0 14px;">
-          <input type="checkbox" id="pf-has-variants"> This product has multiple variants (size, color, etc.)
+          <input type="checkbox" id="pf-has-variants"> This product has multiple variants (e.g. Left Hand / Right Hand)
         </label>
 
         <div class="section-title">Variants</div>
+        <p class="muted" style="font-size:12px;margin-bottom:6px">Opening stock is recorded once, when a variant is created. Later stock goes through Inventory → Stock Adjustment.</p>
+        ${VARIANT_HEAD}
         <div id="variant-rows"></div>
+        <div id="pf-warning" class="login-error" hidden style="margin-top:10px"></div>
         <button type="button" class="btn btn-secondary btn-sm" id="add-variant-row" style="margin-top:10px">+ Add Variant Row</button>
       </form>`;
 
@@ -194,20 +206,37 @@
       refreshRowsUI(rowsContainer);
     });
 
-    modalEl.querySelector("#save-product-btn").addEventListener("click", async () => {
+    const saveBtn = modalEl.querySelector("#save-product-btn");
+    const warningEl = modalEl.querySelector("#pf-warning");
+    let confirmedDuplicateName = null;
+    saveBtn.addEventListener("click", async () => {
+      if (saveBtn.disabled) return;
       const name = modalEl.querySelector("#pf-name").value.trim();
       const sku = modalEl.querySelector("#pf-sku").value.trim();
       if (!name || !sku) { UI.toast("error", "Missing fields", "Name and SKU are required"); return; }
+
+      // Warn (once) before creating a product whose name matches an existing one.
+      const similar = !isEdit || name !== product.name ? DB.Products.findSimilar(name, productId) : [];
+      if (similar.length && confirmedDuplicateName !== name) {
+        warningEl.innerHTML = `A product with this name already exists: ${similar.map((p) => `<strong>${U.escapeHtml(p.name)}</strong> (${U.escapeHtml(p.sku)}${p.active ? "" : ", archived"})`).join(", ")}. If you meant to add stock, use Inventory instead. Click <strong>${isEdit ? "Save Changes" : "Create Product"}</strong> again to save anyway.`;
+        warningEl.hidden = false;
+        confirmedDuplicateName = name;
+        return;
+      }
 
       const hasVariants = modalEl.querySelector("#pf-has-variants").checked;
       const rows = [...rowsContainer.querySelectorAll(".variant-row")];
       const variantsData = rows.map((row) => ({
         id: row.dataset.variantId || undefined,
         name: row.querySelector(".v-name").value.trim() || "Default",
-        costPrice: Number(row.querySelector(".v-cost").value) || 0,
-        sellingPrice: Number(row.querySelector(".v-sell").value) || 0,
-        reorderLevel: Number(row.querySelector(".v-reorder").value) || 0,
-        openingStock: row.querySelector(".v-stock") ? Number(row.querySelector(".v-stock").value) || 0 : undefined,
+        sku: row.querySelector(".v-sku").value.trim(),
+        barcode: row.querySelector(".v-barcode").value.trim(),
+        // Raw values: the data layer validates them and reports bad input
+        // (e.g. negative or fractional stock) instead of silently using 0.
+        costPrice: row.querySelector(".v-cost").value,
+        sellingPrice: row.querySelector(".v-sell").value,
+        reorderLevel: row.querySelector(".v-reorder").value,
+        openingStock: row.querySelector(".v-stock") ? row.querySelector(".v-stock").value : undefined,
       }));
 
       const productData = {
@@ -217,8 +246,10 @@
         unit: modalEl.querySelector("#pf-unit").value.trim() || "pcs",
         description: modalEl.querySelector("#pf-desc").value.trim(),
         hasVariants,
+        userId: Auth.currentUser().id,
       };
 
+      saveBtn.disabled = true;
       try {
         if (isEdit) await DB.Products.update(productId, productData, variantsData);
         else await DB.Products.create(productData, variantsData);
@@ -226,7 +257,10 @@
         UI.closeModal();
         renderTable();
       } catch (err) {
+        warningEl.textContent = err.message;
+        warningEl.hidden = false;
         UI.toast("error", "Could not save product", err.message);
+        saveBtn.disabled = false;
       }
     });
   }

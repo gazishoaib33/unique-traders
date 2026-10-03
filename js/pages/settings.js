@@ -57,18 +57,20 @@
     `;
     if (isAdmin) {
       document.getElementById("s-save").addEventListener("click", async () => {
+        try {
         await DB.Settings.update({
           companyName: document.getElementById("s-name").value.trim(),
           companyAddress: document.getElementById("s-address").value.trim(),
           companyPhone: document.getElementById("s-phone").value.trim(),
           companyEmail: document.getElementById("s-email").value.trim(),
-          currencySymbol: document.getElementById("s-currency-symbol").value.trim() || "$",
-          currencyCode: document.getElementById("s-currency-code").value.trim() || "USD",
+          currencySymbol: document.getElementById("s-currency-symbol").value.trim() || "৳",
+          currencyCode: document.getElementById("s-currency-code").value.trim() || "BDT",
           taxRatePercent: Number(document.getElementById("s-tax").value) || 0,
           invoicePrefix: document.getElementById("s-prefix").value.trim() || "INV",
           lowStockDefaultThreshold: Number(document.getElementById("s-lowstock").value) || 0,
         });
         UI.toast("success", "Settings saved");
+        } catch (err) { UI.toast("error", "Could not save settings", err.message); }
       });
     }
   }
@@ -103,10 +105,12 @@
     modalEl.querySelector("#cat-save").addEventListener("click", async () => {
       const name = modalEl.querySelector("#cat-name").value.trim();
       if (!name) { UI.toast("error", "Name is required"); return; }
-      if (existing) await DB.Categories.update(existing.id, { name }); else await DB.Categories.create({ name });
-      UI.closeModal();
-      UI.toast("success", "Saved");
-      Router.resolve();
+      try {
+        if (existing) await DB.Categories.update(existing.id, { name }); else await DB.Categories.create({ name });
+        UI.closeModal();
+        UI.toast("success", "Saved");
+        Router.resolve();
+      } catch (err) { UI.toast("error", "Could not save category", err.message); }
     });
   }
 
@@ -135,7 +139,7 @@
     document.getElementById("u-add").addEventListener("click", () => openUserModal(null));
     root.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openUserModal(b.dataset.edit)));
     root.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => {
-      UI.confirmDialog({ title: "Remove user?", message: "Users who have recorded sales will be deactivated instead of deleted.", confirmText: "Remove", danger: true, onConfirm: async () => { await DB.Users.remove(b.dataset.del); UI.toast("success", "User removed"); renderUsers(root); } });
+      UI.confirmDialog({ title: "Remove user?", message: "Users who have recorded sales will be deactivated instead of deleted.", confirmText: "Remove", danger: true, onConfirm: async () => { try { await DB.Users.remove(b.dataset.del); UI.toast("success", "User removed"); renderUsers(root); } catch (err) { UI.toast("error", "Cannot remove user", err.message); } } });
     }));
   }
 
