@@ -497,3 +497,71 @@ table.data-table tfoot td{ font-weight:700; border-top:2px solid var(--border-st
   .user-meta{ display:none; }
   .topbar{ padding: 0 12px; gap:8px; }
 }
+
+
+/* ===================== Login: Admin / Viewer parts ===================== */
+.login-switch{ display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:4px; background:var(--bg-subtle); border-radius:10px; margin-bottom:18px; }
+.login-switch[hidden]{ display:none; }
+.login-switch-btn{ border:0; background:transparent; padding:9px 10px; border-radius:7px; font:inherit; font-weight:600; font-size:13.5px; color:var(--text-muted); cursor:pointer; }
+.login-switch-btn.active{ background:var(--bg-elevated); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.12); }
+.viewer-intro{ font-size:13.5px; color:var(--text-muted); line-height:1.55; margin-bottom:16px; }
+.check-label{ display:flex; align-items:center; gap:6px; font-size:13px; color:var(--text-muted); }
+
+/* ===================== Catalog (viewer) ===================== */
+.catalog-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px; }
+.catalog-card{ display:flex; flex-direction:column; overflow:hidden; }
+.catalog-img{ height:160px; background:var(--bg-subtle); display:flex; align-items:center; justify-content:center; font-size:46px; border-bottom:1px solid var(--border); }
+.catalog-img img{ width:100%; height:100%; object-fit:contain; padding:8px; }
+.catalog-body{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:4px; }
+.catalog-body h3{ font-size:15px; line-height:1.3; }
+.catalog-size{ font-size:13px; font-weight:600; }
+.catalog-meta{ font-size:12px; }
+.catalog-variants{ list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; }
+.catalog-variants li{ display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--border); }
+.catalog-price{ font-weight:700; margin-bottom:2px; }
+.catalog-variants strong{ font-size:14px; }
+body.is-viewer .user-chip .user-avatar{ display:none; }
+
+/* ===================== Phone layout ===================== */
+@media (max-width: 700px){
+  .page-content{ padding:12px; }
+  .topbar h2{ font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .topbar .user-meta{ display:none; }
+  .toolbar > *, .filter-bar > *{ flex:1 1 100%; }
+  .toolbar .spacer{ display:none; }
+  .toolbar .search-input, .toolbar .search-input input, .toolbar select{ width:100%; }
+  .filter-bar .field{ min-width:0; flex:1 1 calc(50% - 10px); }
+  .filter-bar .btn{ flex:1 1 calc(50% - 10px); }
+  .field-row{ flex-direction:column; grid-template-columns:1fr !important; }
+  .catalog-grid{ grid-template-columns:1fr; }
+  .search-input, .search-input input{ width:100%; }
+  /* Dashboard KPIs: two per row instead of eight full-width cards. */
+  #kpi-grid.grid-4{ grid-template-columns:repeat(2, 1fr); gap:10px; }
+  .stat-card{ padding:12px; gap:4px; }
+  .stat-value{ font-size:19px; overflow-wrap:anywhere; }
+  .stat-label{ font-size:11.5px; }
+  .stat-icon{ display:none; }
+
+  /* Tables become stacked cards: one card per row, "Label: value" lines. */
+  table.data-table:not(.no-stack) thead{ display:none; }
+  table.data-table:not(.no-stack), table.data-table:not(.no-stack) tbody, table.data-table:not(.no-stack) tfoot,
+  table.data-table:not(.no-stack) tr, table.data-table:not(.no-stack) td{ display:block; width:100%; }
+  table.data-table:not(.no-stack) tbody tr{ border-bottom:1px solid var(--border-strong, var(--border)); padding:8px 4px; }
+  table.data-table:not(.no-stack) tbody tr:hover{ background:transparent; }
+  table.data-table:not(.no-stack) td{ border:0; padding:5px 10px; display:flex; justify-content:space-between; align-items:center; gap:12px; text-align:right; }
+  table.data-table:not(.no-stack) td[data-label]::before{ content:attr(data-label); font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:.03em; color:var(--text-muted); text-align:left; flex-shrink:0; }
+  table.data-table:not(.no-stack) td:not([data-label]), table.data-table:not(.no-stack) td[data-label=""]{ justify-content:flex-end; }
+  table.data-table:not(.no-stack) td[data-label=""]::before{ content:none; }
+  table.data-table:not(.no-stack) td > div:not(.row-actions){ text-align:right; }
+  table.data-table:not(.no-stack) tr.empty-row td{ justify-content:center; text-align:center; }
+  table.data-table:not(.no-stack) tfoot td{ border-top:0; }
+  table.data-table:not(.no-stack) tfoot tr{ display:flex; justify-content:space-between; }
+  table.data-table:not(.no-stack) tfoot td{ width:auto; }
+  .table-wrap{ overflow-x:visible; }
+
+  /* Modals become bottom sheets; tall ones scroll with the backdrop. */
+  .modal-backdrop{ padding:24px 0 0; }
+  .modal, .modal.modal-lg, .modal.modal-sm{ width:100%; max-width:100%; margin-top:auto; border-radius:14px 14px 0 0; }
+  .modal-footer{ flex-wrap:wrap; }
+  .modal-footer .btn{ flex:1 1 auto; }
+}

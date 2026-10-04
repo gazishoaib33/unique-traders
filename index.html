@@ -17,22 +17,34 @@
       <h1>Unique Traders</h1>
       <p>Inventory Management System</p>
     </div>
-    <form id="login-form" class="login-form">
-      <div class="field">
-        <label for="login-username">Username</label>
-        <input id="login-username" type="text" autocomplete="username" placeholder="e.g. admin" required>
+    <div class="login-switch" role="tablist">
+      <button type="button" class="login-switch-btn active" data-login-part="admin" role="tab" aria-selected="true">Admin / Staff</button>
+      <button type="button" class="login-switch-btn" data-login-part="viewer" role="tab" aria-selected="false">Viewer</button>
+    </div>
+
+    <div data-login-panel="admin">
+      <form id="login-form" class="login-form">
+        <div class="field">
+          <label for="login-username">Username</label>
+          <input id="login-username" type="text" autocomplete="username" placeholder="e.g. admin" required>
+        </div>
+        <div class="field">
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" required>
+        </div>
+        <div id="login-error" class="login-error" hidden></div>
+        <button type="submit" class="btn btn-primary btn-block">Sign In</button>
+      </form>
+      <div class="login-hint">
+        <strong>Demo accounts</strong>
+        <div class="hint-row"><span>Admin</span><code>admin / admin123</code></div>
+        <div class="hint-row"><span>Staff</span><code>staff / staff123</code></div>
       </div>
-      <div class="field">
-        <label for="login-password">Password</label>
-        <input id="login-password" type="password" autocomplete="current-password" placeholder="••••••••" required>
-      </div>
-      <div id="login-error" class="login-error" hidden></div>
-      <button type="submit" class="btn btn-primary btn-block">Sign In</button>
-    </form>
-    <div class="login-hint">
-      <strong>Demo accounts</strong>
-      <div class="hint-row"><span>Admin</span><code>admin / admin123</code></div>
-      <div class="hint-row"><span>Staff</span><code>staff / staff123</code></div>
+    </div>
+
+    <div data-login-panel="viewer" hidden>
+      <p class="viewer-intro">Browse every door, frame and fitting with its size, price and availability. Read-only — nothing can be changed, and costs are never shown.</p>
+      <button type="button" id="viewer-enter" class="btn btn-primary btn-block">Open Product Catalog</button>
     </div>
   </div>
 </div>
@@ -103,6 +115,7 @@
 <!-- Pages -->
 <script src="js/pages/login.js"></script>
 <script src="js/pages/dashboard.js"></script>
+<script src="js/pages/catalog.js"></script>
 <script src="js/pages/products.js"></script>
 <script src="js/pages/inventory.js"></script>
 <script src="js/pages/sales.js"></script>

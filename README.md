@@ -49,6 +49,27 @@ python -m http.server 8000
 
 then visit `http://localhost:8000`.
 
+## Two parts: Admin and Viewer
+
+The login screen has two tabs:
+
+- **Admin / Staff** — sign in with a username and password for the full
+  inventory system (products, stock, sales, customers, payments, reports).
+- **Viewer** — one tap, no password: a read-only **Product Catalog** with
+  every product's size, variants (e.g. Left/Right), selling price and
+  availability ("In stock" / "Few left" / "Out of stock"). Viewers can't
+  open any other page, change anything, or see costs or exact quantities.
+  Handy on a showroom tablet or the shop computer for customers. Admins can
+  also create named Viewer accounts in Settings → Users, or turn the
+  password-free Viewer off in Settings → General → Viewer Mode.
+
+  Note: data lives in this browser's storage, so the viewer sees the stock
+  of the computer/tablet it is opened on — it is not an online public page.
+
+The whole app is responsive: on phones, tables turn into stacked cards,
+forms and filters go full-width, popups open as bottom sheets, and long
+lists load 100 rows at a time ("Show more").
+
 ## Demo accounts
 
 | Role  | Username | Password  |

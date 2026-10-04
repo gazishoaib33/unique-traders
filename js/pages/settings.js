@@ -51,6 +51,9 @@
             <div class="field"><label>Low Stock Threshold</label><input id="s-lowstock" type="number" min="0" step="1" value="${settings.lowStockDefaultThreshold}" ${isAdmin ? "" : "disabled"}></div>
           </div>
 
+          <div class="section-title" style="margin-top:22px;">Viewer Mode</div>
+          <label class="check-label" style="color:var(--text)"><input type="checkbox" id="s-viewer" ${settings.viewerModeEnabled !== false ? "checked" : ""} ${isAdmin ? "" : "disabled"}> Show the read-only Viewer (product catalog, no password) on the login screen</label>
+
           ${isAdmin ? `<button class="btn btn-primary" id="s-save" style="margin-top:18px;">Save Settings</button>` : `<p class="muted" style="margin-top:16px;font-size:12.5px;">Only Admins can change company settings.</p>`}
         </div>
       </div>
@@ -68,6 +71,7 @@
           taxRatePercent: Number(document.getElementById("s-tax").value) || 0,
           invoicePrefix: document.getElementById("s-prefix").value.trim() || "INV",
           lowStockDefaultThreshold: Number(document.getElementById("s-lowstock").value) || 0,
+          viewerModeEnabled: document.getElementById("s-viewer").checked,
         });
         UI.toast("success", "Settings saved");
         } catch (err) { UI.toast("error", "Could not save settings", err.message); }
@@ -153,7 +157,7 @@
           <div class="field"><label>${isEdit ? "New Password (leave blank to keep)" : "Password *"}</label><input id="uf-password" type="text"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Role</label><select id="uf-role"><option value="staff">Staff</option><option value="admin">Admin</option></select></div>
+          <div class="field"><label>Role</label><select id="uf-role"><option value="staff">Staff</option><option value="admin">Admin</option><option value="viewer">Viewer (catalog only)</option></select></div>
           <div class="field"><label>Status</label><select id="uf-active"><option value="true">Active</option><option value="false">Inactive</option></select></div>
         </div>
       </form>`;

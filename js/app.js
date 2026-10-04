@@ -51,9 +51,14 @@
     document.getElementById("login-screen").hidden = true;
     document.getElementById("app-shell").hidden = false;
     document.getElementById("user-name").textContent = user.name;
-    document.getElementById("user-role").textContent = user.role;
+    document.getElementById("user-role").textContent = user.role === "viewer" ? "Read-only" : user.role;
     document.getElementById("user-avatar").textContent = Utils.initials(user.name);
-    if (!location.hash) location.hash = "dashboard";
+    document.getElementById("logout-btn").textContent = user.role === "viewer" ? "Exit" : "Log Out";
+    document.body.classList.toggle("is-viewer", user.role === "viewer");
+    // Land on the role's home page if there's no page in the URL, or if the
+    // URL points at a page this role can't open (e.g. a viewer at #sales).
+    const hash = location.hash.replace("#", "");
+    if (!hash || !Router.canOpen(hash)) location.hash = Auth.homeRoute();
     Router.start();
   }
 
@@ -66,12 +71,26 @@
   function initLogout() {
     document.getElementById("logout-btn").addEventListener("click", () => {
       Auth.logout();
+      document.body.classList.remove("is-viewer");
       location.hash = "";
+      Pages.Login.refresh();
       showLogin();
     });
   }
 
+  // Keep table cells labelled for the stacked phone layout as pages and
+  // modals re-render (see UI.labelTables and the "Phone layout" CSS).
+  function watchTables() {
+    let queued = false;
+    new MutationObserver(() => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => { queued = false; UI.labelTables(document); });
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
   async function boot() {
+    watchTables();
     // Wire up the login form FIRST and independently of DB/localStorage
     // initialization, so the Sign In button always does *something* (even
     // if it's showing a clear error) rather than silently no-op'ing.
@@ -89,6 +108,7 @@
       return;
     }
 
+    Pages.Login.refresh();
     const existing = Auth.currentUser();
     if (existing) showApp(existing);
   }

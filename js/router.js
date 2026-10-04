@@ -6,6 +6,7 @@
 
   const ROUTES = [
     { hash: "dashboard", label: "Dashboard", icon: "📊", perm: "dashboard", section: "Overview" },
+    { hash: "catalog", label: "Catalog", icon: "🚪", perm: "catalog", section: "Overview" },
     { hash: "products", label: "Products", icon: "📦", perm: "products", section: "Catalog" },
     { hash: "inventory", label: "Inventory", icon: "🏷️", perm: "inventory", section: "Catalog" },
     { hash: "sales", label: "Sales", icon: "🧾", perm: "sales", section: "Transactions" },
@@ -17,7 +18,7 @@
 
   function renderNav() {
     const nav = document.getElementById("nav-list");
-    const current = location.hash.replace("#", "") || "dashboard";
+    const current = location.hash.replace("#", "") || Auth.homeRoute();
     let html = "";
     let lastSection = null;
     ROUTES.forEach((r) => {
@@ -41,7 +42,7 @@
   function register(hash, def) { PAGES[hash] = def; }
 
   function resolve() {
-    const hash = location.hash.replace("#", "") || "dashboard";
+    const hash = location.hash.replace("#", "") || Auth.homeRoute();
     const page = PAGES[hash];
     const container = document.getElementById("page-content");
 
@@ -72,5 +73,10 @@
 
   function go(hash) { location.hash = hash; }
 
-  global.Router = { register, start, resolve, go, renderNav };
+  function canOpen(hash) {
+    const page = PAGES[hash];
+    return !!page && (!page.permission || Auth.can(page.permission));
+  }
+
+  global.Router = { register, start, resolve, go, renderNav, canOpen };
 })(window);

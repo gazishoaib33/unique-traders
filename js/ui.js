@@ -90,10 +90,35 @@
     return `<tr class="empty-row"><td colspan="${colspan}">${U.escapeHtml(text || "No records found")}</td></tr>`;
   }
 
+  /** Copies each table's column headers onto its cells (data-label) so the
+   *  phone layout can show "Amount: ৳1,200" when a table stacks into cards. */
+  function labelTables(root) {
+    (root || document).querySelectorAll("table.data-table").forEach((table) => {
+      const heads = [...table.querySelectorAll("thead th")].map((th) => th.textContent.trim());
+      if (!heads.length) return;
+      table.querySelectorAll("tbody tr, tfoot tr").forEach((tr) => {
+        let col = 0;
+        [...tr.children].forEach((td) => {
+          const span = td.colSpan || 1;
+          if (span === 1 && heads[col] && !td.hasAttribute("data-label")) td.setAttribute("data-label", heads[col]);
+          col += span;
+        });
+      });
+    });
+  }
+
+  /** Renders/updates a "Show more (N left)" button into `container`. */
+  function showMore(container, total, shown, onMore) {
+    if (!container) return;
+    if (total <= shown) { container.innerHTML = ""; return; }
+    container.innerHTML = `<button class="btn btn-secondary">Show more (${total - shown} more)</button>`;
+    container.firstElementChild.addEventListener("click", onMore);
+  }
+
   function setPageTitle(title) {
     document.getElementById("page-title").textContent = title;
     document.title = `${title} · Unique Traders`;
   }
 
-  global.UI = { toast, openModal, closeModal, confirmDialog, badge, statusBadge, stockBadge, emptyRow, setPageTitle };
+  global.UI = { toast, openModal, closeModal, confirmDialog, badge, statusBadge, stockBadge, emptyRow, setPageTitle, labelTables, showMore };
 })(window);
