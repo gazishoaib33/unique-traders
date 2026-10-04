@@ -4,7 +4,8 @@
 (function (global) {
   "use strict";
   const U = Utils;
-  let state = { search: "", lowOnly: false };
+  const PAGE_SIZE = 100;
+  let state = { search: "", lowOnly: false, limit: PAGE_SIZE };
 
   const TYPE_BADGE = {
     initial: ["Opening", "info"], purchase: ["Purchase", "success"], sale: ["Sale", "neutral"],
@@ -38,9 +39,10 @@
           <tbody id="i-tbody"></tbody>
         </table></div>
       </div>
+      <div id="i-more" style="text-align:center;margin-top:14px"></div>
     `;
-    document.getElementById("i-search").addEventListener("input", U.debounce((e) => { state.search = e.target.value; renderTable(); }, 200));
-    document.getElementById("i-low").addEventListener("change", (e) => { state.lowOnly = e.target.checked; renderTable(); });
+    document.getElementById("i-search").addEventListener("input", U.debounce((e) => { state.search = e.target.value; state.limit = PAGE_SIZE; renderTable(); }, 200));
+    document.getElementById("i-low").addEventListener("change", (e) => { state.lowOnly = e.target.checked; state.limit = PAGE_SIZE; renderTable(); });
     if (canAdjust) document.getElementById("i-adjust").addEventListener("click", () => openAdjustModal());
     await renderTable();
   }
@@ -57,9 +59,10 @@
 
     const tbody = document.getElementById("i-tbody");
     if (!tbody) return;
+    UI.showMore(document.getElementById("i-more"), rows.length, state.limit, () => { state.limit += PAGE_SIZE; renderTable(); });
     if (!rows.length) { tbody.innerHTML = UI.emptyRow(7, "No matching stock records"); return; }
 
-    tbody.innerHTML = rows.map((r) => {
+    tbody.innerHTML = rows.slice(0, state.limit).map((r) => {
       const status = stockStatus(r.stock, r.variant.reorderLevel);
       return `
         <tr>

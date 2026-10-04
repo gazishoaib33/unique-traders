@@ -4,7 +4,8 @@
 (function (global) {
   "use strict";
   const U = Utils;
-  let state = { search: "", categoryId: "", showInactive: false, categories: [] };
+  const PAGE_SIZE = 100;
+  let state = { search: "", categoryId: "", showInactive: false, categories: [], limit: PAGE_SIZE };
 
   function priceRangeLabel(variants) {
     const prices = variants.filter((v) => v.active).map((v) => v.sellingPrice);
@@ -38,11 +39,12 @@
           <tbody id="p-tbody"></tbody>
         </table></div>
       </div>
+      <div id="p-more" style="text-align:center;margin-top:14px"></div>
     `;
 
-    document.getElementById("p-search").addEventListener("input", U.debounce((e) => { state.search = e.target.value; renderTable(); }, 200));
-    document.getElementById("p-category").addEventListener("change", (e) => { state.categoryId = e.target.value; renderTable(); });
-    document.getElementById("p-inactive").addEventListener("change", (e) => { state.showInactive = e.target.checked; renderTable(); });
+    document.getElementById("p-search").addEventListener("input", U.debounce((e) => { state.search = e.target.value; state.limit = PAGE_SIZE; renderTable(); }, 200));
+    document.getElementById("p-category").addEventListener("change", (e) => { state.categoryId = e.target.value; state.limit = PAGE_SIZE; renderTable(); });
+    document.getElementById("p-inactive").addEventListener("change", (e) => { state.showInactive = e.target.checked; state.limit = PAGE_SIZE; renderTable(); });
     if (canEdit) document.getElementById("p-add").addEventListener("click", () => openProductModal(null));
 
     await renderTable();
@@ -56,9 +58,10 @@
     const catMap = Object.fromEntries(state.categories.map((c) => [c.id, c.name]));
     const levels = DB.Stock.levelsMap();
 
+    UI.showMore(document.getElementById("p-more"), products.length, state.limit, () => { state.limit += PAGE_SIZE; renderTable(); });
     if (!products.length) { tbody.innerHTML = UI.emptyRow(canEdit ? 8 : 7, "No products found"); return; }
 
-    tbody.innerHTML = products.map((p) => {
+    tbody.innerHTML = products.slice(0, state.limit).map((p) => {
       const variants = DB.Variants.listByProduct(p.id);
       const activeVariants = variants.filter((v) => v.active);
       const totalStock = activeVariants.reduce((a, v) => a + (levels[v.id] || 0), 0);

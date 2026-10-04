@@ -304,3 +304,38 @@ test("the last active admin cannot be removed or demoted", async () => {
   await assert.rejects(DB.Users.update(admin.id, { role: "staff" }), /active Admin/);
   await assert.rejects(DB.Users.remove(admin.id), /active Admin/);
 });
+
+// ---------------------------------------------------------------- Roles
+test("viewer mode is read-only: catalog only, no quantities, costs or admin pages", async () => {
+  const { Auth } = await freshApp();
+  Auth.loginViewer();
+  assert.equal(Auth.currentUser().role, "viewer");
+  assert.equal(Auth.can("catalog"), true);
+  for (const perm of ["dashboard", "products", "inventory", "sales", "customers", "payments", "reports", "settings", "products.edit", "inventory.adjust", "stock.quantities"]) {
+    assert.equal(Auth.can(perm), false, `viewer must not have ${perm}`);
+  }
+  assert.equal(Auth.homeRoute(), "catalog");
+  Auth.logout();
+  assert.equal(Auth.currentUser(), null);
+});
+
+test("admin and staff keep their access and land on the dashboard", async () => {
+  const { DB, Auth } = await freshApp();
+  assert.equal(Auth.login("owner", "pw").ok, true);
+  assert.equal(Auth.can("inventory.adjust"), true);
+  assert.equal(Auth.can("catalog"), true);
+  assert.equal(Auth.homeRoute(), "dashboard");
+  await DB.Users.create({ name: "Karim", username: "karim", password: "k", role: "staff" });
+  Auth.login("karim", "k");
+  assert.equal(Auth.can("sales"), true);
+  assert.equal(Auth.can("inventory.adjust"), false);
+});
+
+test("viewer accounts can be created; unknown roles are rejected", async () => {
+  const { DB, Auth } = await freshApp();
+  const v = await DB.Users.create({ name: "Showroom", username: "showroom", password: "s", role: "viewer" });
+  assert.equal(v.role, "viewer");
+  assert.equal(Auth.login("showroom", "s").ok, true);
+  assert.equal(Auth.can("sales"), false);
+  await assert.rejects(DB.Users.update(v.id, { role: "superuser" }), /Unknown role/);
+});

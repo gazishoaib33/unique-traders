@@ -153,7 +153,7 @@
           <div class="field"><label>${isEdit ? "New Password (leave blank to keep)" : "Password *"}</label><input id="uf-password" type="text"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Role</label><select id="uf-role"><option value="staff">Staff</option><option value="admin">Admin</option></select></div>
+          <div class="field"><label>Role</label><select id="uf-role"><option value="staff">Staff</option><option value="admin">Admin</option><option value="viewer">Viewer (catalog only)</option></select></div>
           <div class="field"><label>Status</label><select id="uf-active"><option value="true">Active</option><option value="false">Inactive</option></select></div>
         </div>
       </form>`;

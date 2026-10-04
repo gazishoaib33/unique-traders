@@ -689,7 +689,7 @@
         check(data.username && data.password && data.name, "Name, username and password are required");
         const users = col("users", []);
         check(!users.some((u) => sameText(u.username, data.username)), "Username already taken");
-        const rec = { id: U.uid("user"), name: data.name.trim(), username: data.username.trim(), password: data.password, role: data.role === "admin" ? "admin" : "staff", email: data.email || "", active: true, createdAt: U.nowISO() };
+        const rec = { id: U.uid("user"), name: data.name.trim(), username: data.username.trim(), password: data.password, role: ["admin", "staff", "viewer"].includes(data.role) ? data.role : "staff", email: data.email || "", active: true, createdAt: U.nowISO() };
         users.push(rec); saveCol("users", users);
         return rec;
       });
@@ -704,6 +704,7 @@
           check(!users.some((u) => u.id !== id && sameText(u.username, data.username)), "Username already taken");
         }
         if (data.name !== undefined) check(String(data.name).trim(), "Name is required");
+        if (data.role !== undefined) check(["admin", "staff", "viewer"].includes(data.role), "Unknown role");
         Object.assign(rec, data, { id: rec.id });
         check(activeAdminCount(users) > 0, "At least one active Admin account is required");
         saveCol("users", users);
