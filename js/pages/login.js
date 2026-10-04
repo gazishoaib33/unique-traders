@@ -19,7 +19,11 @@
         document.querySelectorAll("[data-login-panel]").forEach((p) => { p.hidden = p.dataset.loginPanel !== part; });
       };
     });
-    document.getElementById("viewer-enter").onclick = () => onSuccess(Auth.loginViewer().user);
+    document.getElementById("viewer-enter").onclick = () => {
+      const result = Auth.loginViewer();
+      if (result.ok) onSuccess(result.user);
+      else { refresh(); UI.toast("error", result.message); }
+    };
 
     form.onsubmit = (e) => {
       e.preventDefault();
@@ -37,6 +41,14 @@
     };
   }
 
+  /** Shows or hides the Viewer tab according to the admin setting. */
+  function refresh() {
+    const enabled = Auth.viewerModeEnabled();
+    const viewerTab = document.querySelector('[data-login-part="viewer"]');
+    document.querySelector(".login-switch").hidden = !enabled;
+    if (!enabled && viewerTab.classList.contains("active")) document.querySelector('[data-login-part="admin"]').click();
+  }
+
   global.Pages = global.Pages || {};
-  global.Pages.Login = { init };
+  global.Pages.Login = { init, refresh };
 })(window);

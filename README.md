@@ -60,7 +60,8 @@ The login screen has two tabs:
   availability ("In stock" / "Few left" / "Out of stock"). Viewers can't
   open any other page, change anything, or see costs or exact quantities.
   Handy on a showroom tablet or the shop computer for customers. Admins can
-  also create named Viewer accounts in Settings → Users.
+  also create named Viewer accounts in Settings → Users, or turn the
+  password-free Viewer off in Settings → General → Viewer Mode.
 
   Note: data lives in this browser's storage, so the viewer sees the stock
   of the computer/tablet it is opened on — it is not an online public page.

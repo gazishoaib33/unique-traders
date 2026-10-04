@@ -339,3 +339,15 @@ test("viewer accounts can be created; unknown roles are rejected", async () => {
   assert.equal(Auth.can("sales"), false);
   await assert.rejects(DB.Users.update(v.id, { role: "superuser" }), /Unknown role/);
 });
+
+test("admins can switch Viewer mode off; it then can't be entered and open viewer sessions end", async () => {
+  const { DB, Auth } = await freshApp();
+  assert.equal(Auth.viewerModeEnabled(), true, "on by default");
+  assert.equal(Auth.loginViewer().ok, true);
+  await DB.Settings.update({ viewerModeEnabled: false });
+  assert.equal(Auth.currentUser(), null, "existing viewer session ends");
+  const r = Auth.loginViewer();
+  assert.equal(r.ok, false);
+  assert.match(r.message, /turned off/);
+  assert.equal(Auth.login("owner", "pw").ok, true, "admin login unaffected");
+});

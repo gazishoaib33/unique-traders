@@ -501,6 +501,7 @@ table.data-table tfoot td{ font-weight:700; border-top:2px solid var(--border-st
 
 /* ===================== Login: Admin / Viewer parts ===================== */
 .login-switch{ display:grid; grid-template-columns:1fr 1fr; gap:4px; padding:4px; background:var(--bg-subtle); border-radius:10px; margin-bottom:18px; }
+.login-switch[hidden]{ display:none; }
 .login-switch-btn{ border:0; background:transparent; padding:9px 10px; border-radius:7px; font:inherit; font-weight:600; font-size:13.5px; color:var(--text-muted); cursor:pointer; }
 .login-switch-btn.active{ background:var(--bg-elevated); color:var(--text); box-shadow:0 1px 3px rgba(0,0,0,.12); }
 .viewer-intro{ font-size:13.5px; color:var(--text-muted); line-height:1.55; margin-bottom:16px; }

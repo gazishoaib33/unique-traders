@@ -73,6 +73,7 @@
       Auth.logout();
       document.body.classList.remove("is-viewer");
       location.hash = "";
+      Pages.Login.refresh();
       showLogin();
     });
   }
@@ -107,6 +108,7 @@
       return;
     }
 
+    Pages.Login.refresh();
     const existing = Auth.currentUser();
     if (existing) showApp(existing);
   }

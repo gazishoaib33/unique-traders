@@ -27,7 +27,13 @@
     return { ok: true, user };
   }
 
+  /** Admins can switch password-free Viewer mode off in Settings (on by default). */
+  function viewerModeEnabled() {
+    return Store.getCollection("settings", {}).viewerModeEnabled !== false;
+  }
+
   function loginViewer() {
+    if (!viewerModeEnabled()) return { ok: false, message: "Viewer mode is turned off" };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify({ userId: GUEST_VIEWER.id, at: Date.now() }));
     return { ok: true, user: GUEST_VIEWER };
   }
@@ -41,7 +47,7 @@
       const raw = sessionStorage.getItem(SESSION_KEY);
       if (!raw) return null;
       const { userId } = JSON.parse(raw);
-      if (userId === GUEST_VIEWER.id) return GUEST_VIEWER;
+      if (userId === GUEST_VIEWER.id) return viewerModeEnabled() ? GUEST_VIEWER : null;
       const users = Store.getCollection("users", []);
       const user = users.find((u) => u.id === userId);
       return user && user.active ? user : null;
@@ -66,5 +72,5 @@
     return user && user.role === "viewer" ? "catalog" : "dashboard";
   }
 
-  global.Auth = { login, loginViewer, logout, currentUser: currentUserSync, can, isAdmin, homeRoute };
+  global.Auth = { login, loginViewer, logout, currentUser: currentUserSync, can, isAdmin, homeRoute, viewerModeEnabled };
 })(window);
