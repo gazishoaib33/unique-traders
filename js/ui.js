@@ -79,6 +79,13 @@
     return badge(text, kind);
   }
 
+  /** "Out of stock" / "3 left (low)" / "12 in stock" badge for a stock level. */
+  function stockBadge(level, reorderLevel) {
+    if (level <= 0) return badge("Out of stock", "danger");
+    if (reorderLevel != null && level <= reorderLevel) return badge(`${level} left (low)`, "warning");
+    return badge(`${level} in stock`, "success");
+  }
+
   function emptyRow(colspan, text) {
     return `<tr class="empty-row"><td colspan="${colspan}">${U.escapeHtml(text || "No records found")}</td></tr>`;
   }
@@ -88,5 +95,5 @@
     document.title = `${title} · Unique Traders`;
   }
 
-  global.UI = { toast, openModal, closeModal, confirmDialog, badge, statusBadge, emptyRow, setPageTitle };
+  global.UI = { toast, openModal, closeModal, confirmDialog, badge, statusBadge, stockBadge, emptyRow, setPageTitle };
 })(window);

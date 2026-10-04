@@ -113,15 +113,65 @@ No page in `js/pages/` needs to change.
   **Variants** hold price/cost/SKU/barcode/reorder level — every product
   has at least one variant (a "Default" one if it has no real variants),
   so stock and sales always operate at the variant level.
-- **Stock** is ledger-based: every purchase, sale, return, and manual
+- **Stock** is ledger-based: every opening balance, purchase, sale, return, and manual
   adjustment is an immutable entry in `stockLedger`; the current level is
   always the sum of entries for that variant. This gives you a full
   audit trail (see the 🕘 history icon on the Inventory page) for free.
 - **Sales** store line items + totals; paid/due amounts are derived from
   the `payments` collection (linked via `saleId`), not stored redundantly.
 - **Customer balance** = sum of their non-cancelled sale totals minus
-  every payment recorded against them (sale-linked or standalone credit
+  every non-voided payment recorded against them (sale-linked or standalone credit
   payments).
+
+## Inventory rules (enforced in `js/db.js`)
+
+These are checked by the data layer itself, not just the page, so they
+hold no matter which screen calls them. (When moving to Supabase, re-create
+them as database constraints / functions — see "Connecting Supabase later".)
+
+- **Stock can never go negative.** A sale or a "remove stock" adjustment
+  larger than what the ledger says is available is refused, and nothing
+  is written.
+- **Every write is all-or-nothing.** A sale, its stock movements, its
+  payment and the invoice counter are saved together or not at all, and
+  each write re-reads the latest saved data first — so two open tabs (or
+  two staff on the same browser profile) can't overwrite each other or
+  sell the same last door twice.
+- **Duplicate submissions are ignored.** Each POS cart carries an id;
+  pressing "Complete Sale" twice returns the first sale.
+- **Variants are unique.** A variant name appears once per product
+  (one "Left Hand"), variant SKUs are unique across the catalog
+  (auto-generated as `PRODUCTSKU-2`, `-3`… when left blank), barcodes are
+  unique when given, and product SKUs are unique. Creating a product
+  whose name matches an existing one shows a warning first.
+- **Quantities are whole numbers ≥ 1; prices and discounts are ≥ 0;**
+  a discount can't exceed its line or the subtotal.
+- **Opening stock is distinct from later stock.** It is recorded as an
+  `initial` ledger entry when a variant is created (or once, later, via
+  Inventory → "Opening stock — first count" if it was created with 0).
+  Everything after that is a `purchase`, `return`, `damage`, `correction`
+  or `other` adjustment, or a `sale`. Ledger entries are never edited or
+  deleted; mistakes are fixed with a correction entry.
+- A variant that still has stock can't be removed from a product, and
+  archived products can't be sold.
+- Payments can't exceed the amount due on a sale or be recorded against a
+  cancelled sale. "Deleting" a payment voids it: it stops counting toward
+  balances but stays in the data (and backups) for auditing.
+
+## Tests
+
+The data layer has automated tests (Node's built-in test runner — no
+packages to install, Node 18+):
+
+```bash
+npm test
+```
+
+They load the real `js/*.js` files into a simulated browser with an
+in-memory `localStorage` and cover product/variant validation, opening vs.
+later stock, selling, overselling, duplicate submissions, rapid and
+two-tab concurrent sales, cancellation, rollback when storage is full,
+payments, and search.
 
 ## Backup & reset
 

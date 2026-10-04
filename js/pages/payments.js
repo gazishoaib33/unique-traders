@@ -46,15 +46,15 @@
       <tr>
         <td>${U.formatDateTime(p.date)}</td>
         <td>${U.escapeHtml(custMap[p.customerId] || "—")}</td>
-        <td class="mono">${p.saleId ? (saleMap[p.saleId] || "—") : "General credit"}</td>
+        <td class="mono">${p.saleId ? U.escapeHtml(saleMap[p.saleId] || "—") : "General credit"}</td>
         <td>${UI.badge(p.method, "info")}</td>
         <td>${UI.badge(p.type === "sale" ? "Sale Payment" : p.type === "refund" ? "Refund" : "Credit Payment", "neutral")}</td>
         <td class="text-right mono">${U.formatMoney(p.amount)}</td>
-        <td>${isAdmin ? `<div class="row-actions"><button class="icon-btn" data-del="${p.id}" title="Delete">🗑️</button></div>` : ""}</td>
+        <td>${isAdmin ? `<div class="row-actions"><button class="icon-btn" data-del="${p.id}" title="Void payment">🗑️</button></div>` : ""}</td>
       </tr>`).join("") : UI.emptyRow(7, "No payments recorded yet");
 
     tbody.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => {
-      UI.confirmDialog({ title: "Delete payment record?", message: "This will increase the customer's outstanding balance.", confirmText: "Delete", danger: true, onConfirm: async () => { await DB.Payments.remove(b.dataset.del); UI.toast("success", "Payment deleted"); loadRows(); } });
+      UI.confirmDialog({ title: "Void this payment?", message: "The customer's outstanding balance will increase. The voided record is kept in the backup for auditing.", confirmText: "Void Payment", danger: true, onConfirm: async () => { try { await DB.Payments.remove(b.dataset.del, Auth.currentUser().id); UI.toast("success", "Payment voided"); loadRows(); } catch (err) { UI.toast("error", "Could not void payment", err.message); } } });
     }));
   }
 

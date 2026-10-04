@@ -7,6 +7,9 @@
 
   let activeTab = "new";
   let cart = []; // { variantId, productName, variantName, sku, unitPrice, qty, discount, maxStock }
+  // One id per cart, sent with the sale: if "Complete Sale" is submitted
+  // twice the data layer returns the first sale instead of selling twice.
+  let checkoutRef = U.uid("chk");
   let historyFilters = { from: "", to: "", customerId: "", status: "" };
 
   async function render(root) {
@@ -26,18 +29,20 @@
   // NEW SALE (POS)
   // ---------------------------------------------------------------
   async function renderNewSale(root) {
-    const [products, customers, settings] = await Promise.all([DB.Products.list({ activeOnly: true }), DB.Customers.list(), DB.Settings.get()]);
-    const variantOptions = [];
-    products.forEach((p) => DB.Variants.listByProduct(p.id).filter((v) => v.active).forEach((v) => {
-      variantOptions.push({ id: v.id, label: `${p.name} — ${v.name}`, sku: v.sku, barcode: v.barcode, price: v.sellingPrice, stock: DB.Stock.getLevel(v.id), productName: p.name, variantName: v.name });
+    const [customers, settings] = await Promise.all([DB.Customers.list(), DB.Settings.get()]);
+    const variantOptions = DB.Products.sellableVariants().map((r) => ({
+      id: r.variant.id, label: `${r.product.name} — ${r.variant.name}`, sku: r.variant.sku, barcode: r.variant.barcode, price: r.variant.sellingPrice,
+      stock: r.stock, productName: r.product.name, variantName: r.variant.name, description: r.product.description || "", searchText: r.searchText,
     }));
+    // Cart lines from an earlier visit: refresh their stock limits.
+    cart.forEach((c) => { const o = variantOptions.find((x) => x.id === c.variantId); c.maxStock = o ? o.stock : 0; });
 
     root.innerHTML = `
-      <div class="grid" style="grid-template-columns: 1.6fr 1fr; align-items:start; gap:18px;">
+      <div class="grid pos-grid">
         <div class="card">
           <div class="card-header"><h3>Items</h3></div>
           <div class="card-pad">
-            <div class="search-input" style="margin-bottom:12px;"><input id="item-search" placeholder="Search product name, SKU or barcode to add…" autocomplete="off"></div>
+            <div class="search-input" style="margin-bottom:12px;"><input id="item-search" placeholder="Search name, size (7x3.5), Left/Right, SKU or scan barcode — Enter adds the first match" autocomplete="off"></div>
             <div id="item-suggestions" class="card" style="display:none; max-height:220px; overflow-y:auto; margin-bottom:12px;"></div>
             <div class="table-wrap"><table class="data-table">
               <thead><tr><th>Item</th><th style="width:90px">Qty</th><th style="width:110px">Price</th><th style="width:90px">Discount</th><th class="text-right">Line Total</th><th></th></tr></thead>
@@ -81,26 +86,45 @@
     const searchInput = document.getElementById("item-search");
     const suggestBox = document.getElementById("item-suggestions");
 
+    function findMatches(query) {
+      const q = query.trim();
+      if (!q) return [];
+      // An exact barcode/SKU (e.g. from a scanner) wins outright.
+      const exact = variantOptions.filter((v) => v.barcode === q || v.sku.toLowerCase() === q.toLowerCase());
+      if (exact.length) return exact;
+      return variantOptions.filter((v) => U.matchesSearch(v.searchText, q)).sort((a, b) => (b.stock > 0) - (a.stock > 0)).slice(0, 12);
+    }
+    function pick(variantId) { addToCart(variantId, variantOptions); searchInput.value = ""; suggestBox.style.display = "none"; searchInput.focus(); }
+
     searchInput.addEventListener("input", U.debounce(() => {
-      const q = searchInput.value.trim().toLowerCase();
-      if (!q) { suggestBox.style.display = "none"; return; }
-      const matches = variantOptions.filter((v) => v.label.toLowerCase().includes(q) || v.sku.toLowerCase().includes(q) || v.barcode.includes(q)).slice(0, 8);
+      const matches = findMatches(searchInput.value);
+      if (!searchInput.value.trim()) { suggestBox.style.display = "none"; return; }
       if (!matches.length) { suggestBox.innerHTML = `<div class="card-pad muted">No matching items</div>`; suggestBox.style.display = "block"; return; }
       suggestBox.innerHTML = matches.map((v) => `
-        <div class="card-pad" style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);cursor:pointer;" data-pick="${v.id}">
-          <div><strong>${U.escapeHtml(v.label)}</strong><div class="muted mono" style="font-size:11.5px">${U.escapeHtml(v.sku)} · ${v.stock} in stock</div></div>
-          <div class="mono">${U.formatMoney(v.price)}</div>
+        <div class="card-pad" style="display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid var(--border);cursor:pointer;${v.stock <= 0 ? "opacity:.55;" : ""}" data-pick="${v.id}">
+          <div><strong>${U.escapeHtml(v.productName)}</strong> — <strong>${U.escapeHtml(v.variantName)}</strong>
+            <div class="muted" style="font-size:11.5px">${U.escapeHtml(v.description)}${v.description ? " · " : ""}<span class="mono">${U.escapeHtml(v.sku)}</span></div></div>
+          <div style="text-align:right;white-space:nowrap"><div class="mono">${U.formatMoney(v.price)}</div>${UI.stockBadge(v.stock)}</div>
         </div>`).join("");
       suggestBox.style.display = "block";
-      suggestBox.querySelectorAll("[data-pick]").forEach((el) => el.addEventListener("click", () => { addToCart(el.dataset.pick, variantOptions); searchInput.value = ""; suggestBox.style.display = "none"; }));
+      suggestBox.querySelectorAll("[data-pick]").forEach((el) => el.addEventListener("click", () => pick(el.dataset.pick)));
     }, 150));
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const matches = findMatches(searchInput.value);
+      if (matches.length) pick(matches[0].id);
+      else if (searchInput.value.trim()) UI.toast("warning", "No matching item", searchInput.value.trim());
+    });
     document.addEventListener("click", (e) => { if (!suggestBox.contains(e.target) && e.target !== searchInput) suggestBox.style.display = "none"; });
 
     document.getElementById("sale-customer").addEventListener("change", updateTotals);
     document.getElementById("sale-discount").addEventListener("input", updateTotals);
     document.getElementById("sale-paid").addEventListener("input", updateTotals);
 
-    document.getElementById("complete-sale").addEventListener("click", async () => {
+    const completeBtn = document.getElementById("complete-sale");
+    completeBtn.addEventListener("click", async () => {
+      if (completeBtn.disabled) return;
       if (!cart.length) { UI.toast("error", "Cart is empty", "Add at least one item"); return; }
       for (const item of cart) {
         if (item.qty > item.maxStock) { UI.toast("error", "Not enough stock", `${item.productName} — ${item.variantName} has only ${item.maxStock} left`); return; }
@@ -109,8 +133,11 @@
       const method = document.getElementById("sale-method").value;
       const extraDiscount = Number(document.getElementById("sale-discount").value) || 0;
       const paidNow = customerId ? Number(document.getElementById("sale-paid").value) || 0 : undefined;
+      completeBtn.disabled = true;
+      completeBtn.textContent = "Saving…";
       try {
         const sale = await DB.Sales.create({
+          clientRef: checkoutRef,
           customerId,
           items: cart.map((c) => ({ variantId: c.variantId, qty: c.qty, unitPrice: c.unitPrice, discount: c.discount })),
           discountTotal: extraDiscount,
@@ -120,10 +147,18 @@
         });
         UI.toast("success", "Sale completed", sale.invoiceNo);
         cart = [];
+        checkoutRef = U.uid("chk");
         renderNewSale(root);
         openInvoiceModal(sale.id);
       } catch (err) {
         UI.toast("error", "Could not complete sale", err.message);
+        // Stock may have changed (e.g. sold from another tab) — refresh limits.
+        const levels = DB.Stock.levelsMap();
+        cart.forEach((c) => { c.maxStock = levels[c.variantId] || 0; });
+        variantOptions.forEach((v) => { v.stock = levels[v.id] || 0; });
+        renderCart(); updateTotals();
+        completeBtn.disabled = false;
+        completeBtn.textContent = "Complete Sale";
       }
     });
 
@@ -144,7 +179,7 @@
       const body = document.getElementById("cart-body");
       body.innerHTML = cart.length ? cart.map((c, idx) => `
         <tr>
-          <td><strong>${U.escapeHtml(c.productName)}</strong><div class="muted" style="font-size:11.5px">${U.escapeHtml(c.variantName)}</div></td>
+          <td><strong>${U.escapeHtml(c.productName)}</strong><div style="font-size:12px"><strong>${U.escapeHtml(c.variantName)}</strong> <span class="muted mono">${U.escapeHtml(c.sku)}</span></div><div class="${c.qty > c.maxStock ? "text-danger" : "muted"}" style="font-size:11px">${c.maxStock} in stock</div></td>
           <td><input type="number" min="1" max="${c.maxStock}" value="${c.qty}" data-qty="${idx}" style="width:70px;padding:6px 8px;"></td>
           <td><input type="number" min="0" step="0.01" value="${c.unitPrice}" data-price="${idx}" style="width:95px;padding:6px 8px;"></td>
           <td><input type="number" min="0" step="0.01" value="${c.discount}" data-discount="${idx}" style="width:80px;padding:6px 8px;"></td>
@@ -231,7 +266,7 @@
       const canCancel = Auth.can("sales.cancel");
       tbody.innerHTML = sales.length ? sales.map((s) => `
         <tr>
-          <td class="mono">${s.invoiceNo}</td>
+          <td class="mono">${U.escapeHtml(s.invoiceNo)}</td>
           <td>${U.formatDate(s.date)}</td>
           <td>${s.customerId ? U.escapeHtml(custMap[s.customerId] || "—") : "Walk-in"}</td>
           <td class="text-right mono">${U.formatMoney(s.grandTotal)}</td>
@@ -253,7 +288,7 @@
       tbody.querySelectorAll("[data-cancel]").forEach((b) => b.addEventListener("click", () => {
         UI.confirmDialog({
           title: "Cancel this sale?", message: "Stock will be restored. Any recorded payments will remain on the customer's account as credit.", confirmText: "Cancel Sale", danger: true,
-          onConfirm: async () => { await DB.Sales.cancel(b.dataset.cancel, Auth.currentUser().id); UI.toast("success", "Sale cancelled"); loadRows(); },
+          onConfirm: async () => { try { await DB.Sales.cancel(b.dataset.cancel, Auth.currentUser().id); UI.toast("success", "Sale cancelled"); loadRows(); } catch (err) { UI.toast("error", "Could not cancel sale", err.message); } },
         });
       }));
     }
@@ -269,12 +304,12 @@
       <div id="invoice-print">
         <div style="display:flex;justify-content:space-between;margin-bottom:16px;">
           <div><h3 style="margin-bottom:2px">${U.escapeHtml(settings.companyName)}</h3><div class="muted" style="font-size:12px">${U.escapeHtml(settings.companyAddress)}<br>${U.escapeHtml(settings.companyPhone)}</div></div>
-          <div style="text-align:right"><div class="muted" style="font-size:12px">Invoice</div><strong class="mono">${sale.invoiceNo}</strong><div class="muted" style="font-size:12px">${U.formatDate(sale.date)}</div></div>
+          <div style="text-align:right"><div class="muted" style="font-size:12px">Invoice</div><strong class="mono">${U.escapeHtml(sale.invoiceNo)}</strong><div class="muted" style="font-size:12px">${U.formatDate(sale.date)}</div></div>
         </div>
         <div style="margin-bottom:14px;font-size:13px;"><strong>Bill To:</strong> ${customer ? U.escapeHtml(customer.name) + " · " + U.escapeHtml(customer.phone || "") : "Walk-in Customer"}</div>
         <div class="table-wrap"><table class="data-table">
           <thead><tr><th>Item</th><th class="text-right">Qty</th><th class="text-right">Price</th><th class="text-right">Discount</th><th class="text-right">Total</th></tr></thead>
-          <tbody>${sale.items.map((it) => `<tr><td>${U.escapeHtml(it.productName)}<div class="muted" style="font-size:11px">${U.escapeHtml(it.variantName)}</div></td><td class="text-right">${it.qty}</td><td class="text-right mono">${U.formatMoney(it.unitPrice)}</td><td class="text-right mono">${U.formatMoney(it.discount)}</td><td class="text-right mono">${U.formatMoney(it.lineTotal)}</td></tr>`).join("")}</tbody>
+          <tbody>${sale.items.map((it) => `<tr><td>${U.escapeHtml(it.productName)}<div class="muted" style="font-size:11px">${U.escapeHtml(it.variantName)}${it.sku ? ` · <span class="mono">${U.escapeHtml(it.sku)}</span>` : ""}</div></td><td class="text-right">${it.qty}</td><td class="text-right mono">${U.formatMoney(it.unitPrice)}</td><td class="text-right mono">${U.formatMoney(it.discount)}</td><td class="text-right mono">${U.formatMoney(it.lineTotal)}</td></tr>`).join("")}</tbody>
           <tfoot>
             <tr><td colspan="4" class="text-right">Subtotal</td><td class="text-right mono">${U.formatMoney(sale.subtotal)}</td></tr>
             <tr><td colspan="4" class="text-right">Discount</td><td class="text-right mono">${U.formatMoney(sale.discountTotal)}</td></tr>

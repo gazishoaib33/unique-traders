@@ -448,10 +448,20 @@ table.data-table tfoot td{ font-weight:700; border-top:2px solid var(--border-st
 .section-title{ font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); margin: 4px 0 10px; }
 
 .variant-row{
-  display:grid; grid-template-columns: 1.4fr 1fr 1fr 1fr .6fr auto; gap:8px; align-items:center;
+  display:grid; grid-template-columns: 1.3fr 1fr .9fr .8fr .8fr .9fr .6fr 32px; gap:8px; align-items:center;
   padding:8px 0; border-bottom:1px dashed var(--border);
 }
-.variant-row input{ padding:7px 9px; font-size:13px; }
+.variant-row.variant-head{ padding:0 0 4px; font-size:11.5px; font-weight:600; color:var(--text-muted); border-bottom:none; }
+@media (max-width: 760px){
+  .variant-row{ grid-template-columns: 1fr 1fr; }
+  .variant-row.variant-head{ display:none; }
+  .variant-row input::placeholder{ color:var(--text-muted); }
+}
+.text-danger{ color:var(--danger); }
+.pos-grid{ grid-template-columns: 1.6fr 1fr; align-items:start; gap:18px; }
+.pos-grid > *{ min-width:0; }
+@media (max-width: 900px){ .pos-grid{ grid-template-columns: 1fr; } }
+.variant-row input{ padding:7px 9px; font-size:13px; min-width:0; width:100%; }
 
 .kv-list{ display:flex; flex-direction:column; gap:10px; }
 .kv-list .kv-row{ display:flex; justify-content:space-between; font-size:13.5px; padding:8px 0; border-bottom:1px solid var(--border); }
