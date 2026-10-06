@@ -88,7 +88,8 @@ catalog, adjust stock, or see cost/profit figures.
 index.html            Shell markup (login screen + app shell)
 css/styles.css         Design system (light/dark theme via CSS variables)
 js/
-  utils.js             Generic helpers (formatting, CSV export, dates…)
+  utils.js             Generic helpers (formatting, CSV export, dates, size/side parsing)
+  icons.js             Inline SVG icon set (works offline, follows the theme)
   storage.js            localStorage persistence — the ONLY file that
                         touches localStorage directly (see below)
   seed.js               First-run mock data generator
@@ -100,7 +101,7 @@ js/
   router.js                Hash router + sidebar nav + role guards
   app.js                    Bootstraps the app
   pages/
-    login.js, dashboard.js, products.js, inventory.js, sales.js,
+    login.js, dashboard.js, products.js, inventory.js, sales.js, memo.js,
     customers.js, payments.js, reports.js, settings.js
 ```
 
@@ -143,6 +144,28 @@ No page in `js/pages/` needs to change.
 - **Customer balance** = sum of their non-cancelled sale totals minus
   every non-voided payment recorded against them (sale-linked or standalone credit
   payments).
+
+## Sales memos & printing
+
+Every completed sale opens its **memo** (`#memo?id=<sale>`), which can be
+reopened any time from **Sales History** or the dashboard's Recent sales.
+
+- **Print Memo** prints only the memo — sidebar, buttons and navigation are
+  hidden by print CSS (`@media print` in `css/styles.css`).
+- Paper sizes: **A4** (default) or **Receipt 80mm** for thermal printers
+  (one continuous page sized to the receipt). The choice is remembered per
+  browser. Long memos repeat the table header on each A4 page and never
+  split a row.
+- **Save as PDF**: choose "Save as PDF" as the printer in the print dialog.
+- The header shows the company name plus, if filled in under
+  **Settings → General**, the business description, address, phone and email.
+  Nothing is printed that isn't stored there.
+- Walk-in sales can record an optional customer name and phone for the memo;
+  registered customers use their saved details. Cancelled sales print with a
+  CANCELLED stamp.
+- Size is read from the product description (e.g. "7x3.5 feet" → 7×3.5 ft)
+  and Type/Side from the variant name (e.g. "Left Hand (L-HB)"). New sales
+  store the size on each line; older sales look it up from the product.
 
 ## Inventory rules (enforced in `js/db.js`)
 

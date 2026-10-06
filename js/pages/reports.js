@@ -34,7 +34,7 @@
         <div class="field"><label>To</label><input type="date" id="rp-to" value="${range.to}"></div>
         <button class="btn btn-secondary" id="rp-apply">Apply</button>
         <div class="spacer"></div>
-        <button class="btn btn-ghost" id="rp-export">⬇ Export CSV</button>
+        <button class="btn btn-ghost" id="rp-export">${Icons.svg("download", 15)} Export CSV</button>
       </div>`;
   }
 
@@ -88,7 +88,7 @@
         <div class="card stat-card"><span class="stat-label">Value at Cost</span><div class="stat-value">${U.formatMoney(data.totals.value)}</div></div>
         <div class="card stat-card"><span class="stat-label">Value at Retail</span><div class="stat-value">${U.formatMoney(data.totals.retailValue)}</div></div>
       </div>
-      <div class="card"><div class="card-header"><h3>Stock Valuation by Variant</h3><button class="btn btn-ghost btn-sm" id="rp-export">⬇ Export CSV</button></div>
+      <div class="card"><div class="card-header"><h3>Stock Valuation by Variant</h3><button class="btn btn-ghost btn-sm" id="rp-export">${Icons.svg("download", 15)} Export CSV</button></div>
         <div class="table-wrap"><table class="data-table">
           <thead><tr><th>Product</th><th>Variant</th><th>SKU</th><th class="text-right">Qty</th><th class="text-right">Cost</th><th class="text-right">Value</th></tr></thead>
           <tbody>${data.rows.length ? data.rows.map((r) => `<tr><td>${U.escapeHtml(r.product)}</td><td>${U.escapeHtml(r.variant)}</td><td class="mono muted">${U.escapeHtml(r.sku)}</td><td class="text-right">${r.qty}</td><td class="text-right mono">${U.formatMoney(r.cost)}</td><td class="text-right mono">${U.formatMoney(r.value)}</td></tr>`).join("") : UI.emptyRow(6, "No stock recorded")}</tbody>
@@ -104,10 +104,10 @@
         <div class="card stat-card"><span class="stat-label">Customers with Dues</span><div class="stat-value">${U.formatNumber(data.rows.length)}</div></div>
         <div class="card stat-card"><span class="stat-label">Total Outstanding</span><div class="stat-value" style="color:var(--danger)">${U.formatMoney(data.totals.balance)}</div></div>
       </div>
-      <div class="card"><div class="card-header"><h3>Customer Dues</h3><button class="btn btn-ghost btn-sm" id="rp-export">⬇ Export CSV</button></div>
+      <div class="card"><div class="card-header"><h3>Customer Dues</h3><button class="btn btn-ghost btn-sm" id="rp-export">${Icons.svg("download", 15)} Export CSV</button></div>
         <div class="table-wrap"><table class="data-table">
           <thead><tr><th>Customer</th><th>Phone</th><th>Type</th><th class="text-right">Balance</th></tr></thead>
-          <tbody>${data.rows.length ? data.rows.map((r) => `<tr><td>${U.escapeHtml(r.customer.name)}</td><td>${U.escapeHtml(r.customer.phone || "—")}</td><td>${UI.badge(r.customer.type, "neutral")}</td><td class="text-right mono">${U.formatMoney(r.balance)}</td></tr>`).join("") : UI.emptyRow(4, "No outstanding balances 🎉")}</tbody>
+          <tbody>${data.rows.length ? data.rows.map((r) => `<tr><td>${U.escapeHtml(r.customer.name)}</td><td>${U.escapeHtml(r.customer.phone || "—")}</td><td>${UI.badge(r.customer.type, "neutral")}</td><td class="text-right mono">${U.formatMoney(r.balance)}</td></tr>`).join("") : UI.emptyRow(4, "No outstanding balances — every customer is fully paid")}</tbody>
         </table></div>
       </div>`;
     document.getElementById("rp-export").addEventListener("click", () => U.downloadTextFile("customer-dues.csv", U.toCSV(data.rows.map((r) => ({ customer: r.customer.name, phone: r.customer.phone, type: r.customer.type, balance: r.balance }))), "text/csv"));

@@ -50,7 +50,7 @@
         <td>${UI.badge(p.method, "info")}</td>
         <td>${UI.badge(p.type === "sale" ? "Sale Payment" : p.type === "refund" ? "Refund" : "Credit Payment", "neutral")}</td>
         <td class="text-right mono">${U.formatMoney(p.amount)}</td>
-        <td>${isAdmin ? `<div class="row-actions"><button class="icon-btn" data-del="${p.id}" title="Void payment">🗑️</button></div>` : ""}</td>
+        <td>${isAdmin ? `<div class="row-actions"><button class="icon-btn danger" data-del="${p.id}" title="Void payment" aria-label="Void payment">${Icons.svg("trash", 17)}</button></div>` : ""}</td>
       </tr>`).join("") : UI.emptyRow(7, "No payments recorded yet");
 
     tbody.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", () => {

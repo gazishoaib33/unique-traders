@@ -22,9 +22,37 @@
   window.addEventListener("error", (e) => showFatalError("A script failed to run: " + (e.message || e.error) + ". Try reloading the page, or open this file through a local server instead of double-clicking it."));
   window.addEventListener("unhandledrejection", (e) => showFatalError("Something went wrong: " + (e.reason && e.reason.message ? e.reason.message : e.reason)));
 
+  const SIDEBAR_KEY = "uti::sidebar";
+
   function applyTheme(theme) {
-    if (theme === "dark") { document.documentElement.setAttribute("data-theme", "dark"); document.getElementById("theme-toggle").textContent = "☀️"; }
-    else { document.documentElement.setAttribute("data-theme", "light"); document.getElementById("theme-toggle").textContent = "🌙"; }
+    document.documentElement.setAttribute("data-theme", theme === "dark" ? "dark" : "light");
+    document.getElementById("theme-toggle").innerHTML = Icons.svg(theme === "dark" ? "sun" : "moon");
+  }
+
+  // Static shell icons (SVG, so they work offline and match the theme).
+  function initIcons() {
+    document.getElementById("menu-toggle").innerHTML = Icons.svg("menu", 20);
+    document.getElementById("sidebar-close").innerHTML = Icons.svg("close");
+    document.getElementById("logout-icon").innerHTML = Icons.svg("logout", 16);
+  }
+
+  // Desktop: the sidebar can collapse to icons only (remembered per browser).
+  function initSidebarCollapse() {
+    const btn = document.getElementById("sidebar-collapse");
+    const apply = (collapsed) => {
+      document.body.classList.toggle("sidebar-collapsed", collapsed);
+      btn.innerHTML = Icons.svg(collapsed ? "expand" : "collapse");
+      btn.setAttribute("aria-label", collapsed ? "Expand sidebar" : "Collapse sidebar");
+      btn.title = collapsed ? "Expand sidebar" : "Collapse sidebar";
+    };
+    let collapsed = false;
+    try { collapsed = localStorage.getItem(SIDEBAR_KEY) === "collapsed"; } catch (e) { /* storage blocked */ }
+    apply(collapsed);
+    btn.addEventListener("click", () => {
+      collapsed = !document.body.classList.contains("sidebar-collapsed");
+      try { localStorage.setItem(SIDEBAR_KEY, collapsed ? "collapsed" : "open"); } catch (e) { /* ignore */ }
+      apply(collapsed);
+    });
   }
 
   function initTheme() {
@@ -53,7 +81,7 @@
     document.getElementById("user-name").textContent = user.name;
     document.getElementById("user-role").textContent = user.role === "viewer" ? "Read-only" : user.role;
     document.getElementById("user-avatar").textContent = Utils.initials(user.name);
-    document.getElementById("logout-btn").textContent = user.role === "viewer" ? "Exit" : "Log Out";
+    document.getElementById("logout-label").textContent = user.role === "viewer" ? "Exit" : "Log Out";
     document.body.classList.toggle("is-viewer", user.role === "viewer");
     // Land on the role's home page if there's no page in the URL, or if the
     // URL points at a page this role can't open (e.g. a viewer at #sales).
@@ -96,8 +124,10 @@
     // if it's showing a clear error) rather than silently no-op'ing.
     showLogin();
     Pages.Login.init((user) => showApp(user));
+    initIcons();
     initTheme();
     initSidebarToggle();
+    initSidebarCollapse();
     initLogout();
 
     try {
