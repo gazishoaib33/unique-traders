@@ -145,6 +145,16 @@ No page in `js/pages/` needs to change.
   every non-voided payment recorded against them (sale-linked or standalone credit
   payments).
 
+## Applying a stock count
+
+When you count your stock (or export it from another app), the count can be applied in one step:
+
+1. Save the sheet's rows as JSON in `tools/stock-count/<date>.json` (the `unique_trader_export_*.xlsx` columns: Product Code, Product Name, Category, Brand, Series, Type, Side, Width, Height, Current Stock, Minimum Stock).
+2. Run `node tools/build-stock-count.js tools/stock-count/<date>.json`. It matches each row to the app's products by design name, size, side (Left/Right) and type (HB/TB), prints a report, and writes `js/stock-count-data.js`. Name differences between the sheet and the app (e.g. "Lotto" vs "Butterfly Loto") are listed by hand in the script's `ALIASES`.
+3. In the app: **Settings → Data & Backup → Apply stock count** (admin). It shows a preview, downloads a backup, then sets each counted item to its counted quantity, adds items the app didn't have, and archives (with 0 stock) products not in the count. Stock changes are recorded as "correction" entries in stock history; nothing is deleted. Running it twice changes nothing.
+
+New items only get a price when the same design, size and type already had one; others start at ৳0 and need a price in Products.
+
 ## Sales memos & printing
 
 Every completed sale opens its **memo** (`#memo?id=<sale>`), which can be

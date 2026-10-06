@@ -423,3 +423,73 @@ test("dashboard totals: all-time sales, current stock units, weekly/monthly tren
   assert.equal(s.trendMonthly[11].value, 2000);
   assert.equal(s.revenueToday, 2000);
 });
+
+// ---------------------------------------------------------------- Stock count import
+test("stock count: sets counted stock, adds new items, archives the rest, and is safe to re-run", async () => {
+  const fs = require("fs");
+  const path = require("path");
+  const vm = require("vm");
+  const app = createApp({ catalog: true });
+  const { DB, context } = app;
+  await DB.init();
+  vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "js", "stock-count-data.js"), "utf8"), context);
+  const data = context.STOCK_COUNT;
+  const bySku = (sku) => DB.Variants.all().find((v) => v.sku === sku);
+
+  // A real sale before the count: it must survive untouched.
+  const bronzeL = bySku("UT-884034"); // Cosmic Door Bronze 7x3.5, Left Hand (L-HB), opening 14
+  assert.equal(DB.Stock.getLevel(bronzeL.id), 14);
+  const sale = await DB.Sales.create({ items: [{ variantId: bronzeL.id, qty: 2, unitPrice: 14200 }], paymentMethod: "cash", paidNow: 28400 });
+  assert.equal(DB.Stock.getLevel(bronzeL.id), 12);
+
+  const preview = await DB.StockCount.preview();
+  assert.equal(preview.matched, 93);
+  assert.equal(preview.newVariants, 195);
+  assert.equal(preview.archiveProducts, 482 - 45);
+  assert.equal(preview.notFound.length, 0);
+  assert.equal(preview.alreadyApplied, false);
+
+  await DB.StockCount.apply(undefined, "user_admin");
+
+  // Counted quantity wins (BRONZE-7-3P5-HAS-L counted 1), recorded as a correction.
+  assert.equal(DB.Stock.getLevel(bronzeL.id), 1);
+  const ledger = await DB.Stock.ledgerFor(bronzeL.id);
+  assert.equal(ledger[0].type, "correction");
+  assert.equal(ledger[0].change, -11);
+
+  // Active stock now equals the sheet: 1,041 units, and only sheet items are active.
+  const products = await DB.Products.list();
+  const active = new Set(products.filter((p) => p.active).map((p) => p.id));
+  const activeVariants = DB.Variants.all().filter((v) => v.active && active.has(v.productId));
+  assert.equal(activeVariants.length, data.rows);
+  assert.equal(activeVariants.reduce((a, v) => a + DB.Stock.getLevel(v.id), 0), data.totalUnits);
+
+  // New product from the sheet, with its counted stock.
+  const blockL = bySku("BLOCK-7-2P5-CHI-L");
+  assert.ok(blockL && blockL.active);
+  assert.equal(DB.Stock.getLevel(blockL.id), 11);
+  // Prices are copied only from the same design/size/type; otherwise left at 0.
+  assert.equal(bySku("LOUVERCOFFEE-2-2P5-CHI").sellingPrice, 3400);
+  assert.equal(bySku("SPECTRA-7-2P5-HAS-R").sellingPrice, 9400);
+  assert.equal(blockL.sellingPrice, 0);
+
+  // A product not in the sheet is archived with 0 stock, not deleted.
+  const screw = products.find((p) => /screw/i.test(p.name));
+  assert.equal(screw.active, false);
+  DB.Variants.listByProduct(screw.id).forEach((v) => assert.equal(DB.Stock.getLevel(v.id), 0));
+
+  // Sales history untouched.
+  const m = DB.Sales.memoData(sale.id);
+  assert.equal(m.totals.grandTotal, 28400);
+
+  // Running it again changes nothing.
+  const again = await DB.StockCount.preview();
+  assert.equal(again.alreadyApplied, true);
+  assert.equal(again.stockChanges, 0);
+  assert.equal(again.newVariants, 0);
+  assert.equal(again.archiveProducts, 0);
+  const before = DB.Variants.all().length;
+  await DB.StockCount.apply(undefined, "user_admin");
+  assert.equal(DB.Variants.all().length, before);
+  assert.equal(DB.Stock.getLevel(bronzeL.id), 1);
+});

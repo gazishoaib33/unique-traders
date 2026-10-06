@@ -909,3 +909,8 @@ table.memo-items .item-sub{ font-size:11.5px; color:#8a8074; margin-top:1px; }
 @media (prefers-reduced-motion: reduce){
   *, *::before, *::after{ animation-duration: .001ms !important; transition-duration: .001ms !important; }
 }
+
+/* Settings → Apply stock count */
+.sc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13.5px; }
+.sc-list li { padding-left: 16px; position: relative; }
+.sc-list li::before { content: ""; position: absolute; left: 2px; top: 8px; width: 6px; height: 6px; border-radius: 50%; background: var(--brand); }

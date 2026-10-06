@@ -199,8 +199,37 @@
     });
   }
 
+  /** "Apply stock count" card: preview of js/stock-count-data.js against this browser's data. */
+  async function stockCountCard() {
+    if (!DB.StockCount.available()) return "";
+    const s = await DB.StockCount.preview();
+    const n = U.formatNumber;
+    const done = (await DB.Settings.get()).stockCounts || [];
+    const last = done.filter((c) => c.id === s.id).pop();
+    return `
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-header"><h3>Apply stock count — ${U.escapeHtml(s.label)}</h3>${last ? UI.badge("Applied " + U.formatDateTime(last.appliedAt), "success") : ""}</div>
+        <div class="card-pad">
+          <p class="muted" style="font-size:13px;margin-bottom:12px;">Updates this app to match your stock-count sheet (${n(s.rows)} items, ${n(s.totalUnits)} units). Each counted item is set to its counted quantity; products that aren't in the sheet are archived and set to 0. Nothing is deleted — every change is recorded in stock history, and archived products can be restored from Products.</p>
+          <ul class="sc-list">
+            <li><strong>${n(s.matched)}</strong> existing items matched — <strong>${n(s.stockChanges)}</strong> change (+${n(s.unitsAdded)} / −${n(s.unitsRemoved)} units)</li>
+            <li><strong>${n(s.newVariants)}</strong> new items added (${n(s.newProducts)} new products, ${n(s.newUnits)} units)${s.withoutPrice ? ` — <strong>${n(s.withoutPrice)}</strong> have no price yet` : ""}</li>
+            <li><strong>${n(s.archiveProducts)}</strong> products not in the sheet will be archived${s.archiveVariants ? ` (plus ${n(s.archiveVariants)} variants)` : ""}${s.zeroedUnits ? ` — ${n(s.zeroedUnits)} units set to 0` : ""}</li>
+            ${s.reactivated ? `<li><strong>${n(s.reactivated)}</strong> archived products are in the sheet and will be restored</li>` : ""}
+            ${s.notFound.length ? `<li style="color:var(--danger)">${n(s.notFound.length)} sheet rows couldn't be matched and will be skipped: ${U.escapeHtml(s.notFound.join(", "))}</li>` : ""}
+          </ul>
+          ${s.archiveNames.length ? `<details style="margin:10px 0 14px;font-size:13px;"><summary style="cursor:pointer">Show the ${n(s.archiveNames.length)} products that will be archived</summary><div class="muted" style="margin-top:8px;max-height:220px;overflow:auto;">${s.archiveNames.map(U.escapeHtml).join(" · ")}</div></details>` : ""}
+          ${s.stockChanges || s.newVariants || s.archiveProducts || s.archiveVariants
+            ? `<button class="btn btn-primary" id="d-stockcount">${Icons.svg("layers", 15)} Apply stock count</button>
+               <span class="muted" style="font-size:12px;margin-left:8px;">A backup file is downloaded first.</span>`
+            : `<p style="font-size:13px;display:flex;gap:8px;align-items:center;">${Icons.svg("check", 16)} Your stock already matches this count.</p>`}
+        </div>
+      </div>`;
+  }
+
   async function renderData(root) {
     root.innerHTML = `
+      ${await stockCountCard()}
       <div class="grid grid-2">
         <div class="card">
           <div class="card-header"><h3>Backup & Restore</h3></div>
@@ -242,6 +271,22 @@
         </div>
       </div>
     `;
+    const scBtn = document.getElementById("d-stockcount");
+    if (scBtn) scBtn.addEventListener("click", () => {
+      UI.confirmDialog({
+        title: "Apply stock count?",
+        message: "Stock levels will be set to the counted quantities, new products added, and products not in the sheet archived with 0 stock. A backup of your current data is downloaded first.",
+        confirmText: "Apply stock count",
+        onConfirm: async () => {
+          try {
+            U.downloadTextFile(`unique-traders-backup-before-stock-count-${U.todayISO()}.json`, JSON.stringify(DB.Backup.exportJSON(), null, 2), "application/json");
+            const r = await DB.StockCount.apply(undefined, Auth.currentUser().id);
+            UI.toast("success", "Stock count applied", `${U.formatNumber(r.stockChanges)} stock changes, ${U.formatNumber(r.newVariants)} new items, ${U.formatNumber(r.archiveProducts)} products archived`);
+            renderData(root);
+          } catch (err) { UI.toast("error", "Stock count not applied", err.message); }
+        },
+      });
+    });
     document.getElementById("d-export").addEventListener("click", () => {
       const data = DB.Backup.exportJSON();
       U.downloadTextFile(`unique-traders-backup-${U.todayISO()}.json`, JSON.stringify(data, null, 2), "application/json");
