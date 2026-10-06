@@ -4,15 +4,27 @@
 (function (global) {
   "use strict";
   const U = Utils;
-  const PAGE_SIZE = 100;
-  let state = { search: "", categoryId: "", showInactive: false, categories: [], limit: PAGE_SIZE };
+  // Fewer rows per page on phones, where each row is a tall stacked card.
+  const PAGE_SIZE = window.innerWidth <= 700 ? 30 : 100;
+  let state = { search: "", categoryId: "", stock: "", sort: "name", showInactive: false, categories: [], limit: PAGE_SIZE };
 
-  function priceRangeLabel(variants) {
-    const prices = variants.filter((v) => v.active).map((v) => v.sellingPrice);
-    if (!prices.length) return "—";
+  function priceRange(variants) {
+    const prices = variants.map((v) => v.sellingPrice);
+    if (!prices.length) return { label: "—", min: 0 };
     const min = Math.min(...prices), max = Math.max(...prices);
-    return min === max ? U.formatMoney(min) : `${U.formatMoney(min)} – ${U.formatMoney(max)}`;
+    return { label: min === max ? U.formatMoney(min) : `${U.formatMoney(min)} – ${U.formatMoney(max)}`, min };
   }
+
+  /** "in" | "low" | "out" for a product, from its active variants. */
+  function stockState(variants, levels) {
+    if (!variants.length) return "out";
+    const lv = variants.map((v) => levels[v.id] || 0);
+    if (lv.every((l) => l <= 0)) return "out";
+    if (variants.some((v, i) => lv[i] <= (v.reorderLevel || 0))) return "low";
+    return "in";
+  }
+
+  const AVAILABILITY = { in: ["In stock", "success"], low: ["Low stock", "warning"], out: ["Out of stock", "danger"] };
 
   async function render(root) {
     const canEdit = Auth.can("products.edit");
@@ -20,21 +32,32 @@
 
     root.innerHTML = `
       <div class="toolbar">
-        <div class="search-input"><input id="p-search" placeholder="Search name, size (7x3.5), variant, SKU or barcode…"></div>
-        <select id="p-category" class="field-select">
-          <option value="">All Categories</option>
+        <div class="search-input" style="flex:1 1 280px"><input id="p-search" type="search" placeholder="Search name, code, size (7x3.5), Left/Right…" value="${U.escapeHtml(state.search)}" style="width:100%"></div>
+        <select id="p-category" aria-label="Category">
+          <option value="">All categories</option>
           ${state.categories.map((c) => `<option value="${c.id}">${U.escapeHtml(c.name)}</option>`).join("")}
         </select>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-muted)">
-          <input type="checkbox" id="p-inactive"> Show archived
-        </label>
-        <div class="spacer"></div>
-        ${canEdit ? `<button class="btn btn-primary" id="p-add">+ New Product</button>` : ""}
+        <select id="p-stock" aria-label="Availability">
+          <option value="">Any availability</option>
+          <option value="in">In stock</option>
+          <option value="low">Low stock</option>
+          <option value="out">Out of stock</option>
+        </select>
+        <select id="p-sort" aria-label="Sort by">
+          <option value="name">Name A–Z</option>
+          <option value="stock-asc">Stock: low → high</option>
+          <option value="stock-desc">Stock: high → low</option>
+          <option value="price-asc">Price: low → high</option>
+          <option value="price-desc">Price: high → low</option>
+        </select>
+        <label class="check-label"><input type="checkbox" id="p-inactive" ${state.showInactive ? "checked" : ""}> Show archived</label>
+        ${canEdit ? `<button class="btn btn-primary" id="p-add">${Icons.svg("plus", 16)} New Product</button>` : ""}
       </div>
+      <p class="muted" id="p-count" style="font-size:12.5px;margin:-4px 0 12px"></p>
       <div class="card">
         <div class="table-wrap"><table class="data-table">
           <thead><tr>
-            <th></th><th>Product</th><th>Category</th><th>Variants</th><th class="text-right">Stock</th><th class="text-right">Price</th><th>Status</th>${canEdit ? "<th></th>" : ""}
+            <th>Product</th><th>Category</th><th>Size</th><th>Side / variants</th><th class="text-right">Stock</th><th class="text-right">Price</th><th>Availability</th>${canEdit ? '<th class="text-right">Actions</th>' : ""}
           </tr></thead>
           <tbody id="p-tbody"></tbody>
         </table></div>
@@ -42,10 +65,17 @@
       <div id="p-more" style="text-align:center;margin-top:14px"></div>
     `;
 
-    document.getElementById("p-search").addEventListener("input", U.debounce((e) => { state.search = e.target.value; state.limit = PAGE_SIZE; renderTable(); }, 200));
-    document.getElementById("p-category").addEventListener("change", (e) => { state.categoryId = e.target.value; state.limit = PAGE_SIZE; renderTable(); });
-    document.getElementById("p-inactive").addEventListener("change", (e) => { state.showInactive = e.target.checked; state.limit = PAGE_SIZE; renderTable(); });
-    if (canEdit) document.getElementById("p-add").addEventListener("click", () => openProductModal(null));
+    const $ = (id) => document.getElementById(id);
+    $("p-category").value = state.categoryId;
+    $("p-stock").value = state.stock;
+    $("p-sort").value = state.sort;
+    const reset = () => { state.limit = PAGE_SIZE; renderTable(); };
+    $("p-search").addEventListener("input", U.debounce((e) => { state.search = e.target.value; reset(); }, 180));
+    $("p-category").addEventListener("change", (e) => { state.categoryId = e.target.value; reset(); });
+    $("p-stock").addEventListener("change", (e) => { state.stock = e.target.value; reset(); });
+    $("p-sort").addEventListener("change", (e) => { state.sort = e.target.value; reset(); });
+    $("p-inactive").addEventListener("change", (e) => { state.showInactive = e.target.checked; reset(); });
+    if (canEdit) $("p-add").addEventListener("click", () => openProductModal(null));
 
     await renderTable();
   }
@@ -53,38 +83,59 @@
   async function renderTable() {
     const canEdit = Auth.can("products.edit");
     const tbody = document.getElementById("p-tbody");
+    if (!tbody) return;
     let products = await DB.Products.list({ search: state.search, categoryId: state.categoryId });
     if (!state.showInactive) products = products.filter((p) => p.active);
     const catMap = Object.fromEntries(state.categories.map((c) => [c.id, c.name]));
     const levels = DB.Stock.levelsMap();
 
-    UI.showMore(document.getElementById("p-more"), products.length, state.limit, () => { state.limit += PAGE_SIZE; renderTable(); });
-    if (!products.length) { tbody.innerHTML = UI.emptyRow(canEdit ? 8 : 7, "No products found"); return; }
+    // Build display rows once (stock, price, availability) so we can filter and sort on them.
+    let rows = products.map((p) => {
+      const activeVariants = DB.Variants.listByProduct(p.id).filter((v) => v.active);
+      const totalStock = activeVariants.reduce((a, v) => a + Math.max(0, levels[v.id] || 0), 0);
+      return { p, activeVariants, totalStock, price: priceRange(activeVariants), avail: stockState(activeVariants, levels), size: U.parseSize(p.description, p.name) };
+    });
+    if (state.stock) rows = rows.filter((r) => r.avail === state.stock);
+    const sorters = {
+      name: (a, b) => a.p.name.localeCompare(b.p.name),
+      "stock-asc": (a, b) => a.totalStock - b.totalStock || a.p.name.localeCompare(b.p.name),
+      "stock-desc": (a, b) => b.totalStock - a.totalStock || a.p.name.localeCompare(b.p.name),
+      "price-asc": (a, b) => a.price.min - b.price.min,
+      "price-desc": (a, b) => b.price.min - a.price.min,
+    };
+    rows.sort(sorters[state.sort] || sorters.name);
 
-    tbody.innerHTML = products.slice(0, state.limit).map((p) => {
-      const variants = DB.Variants.listByProduct(p.id);
-      const activeVariants = variants.filter((v) => v.active);
-      const totalStock = activeVariants.reduce((a, v) => a + (levels[v.id] || 0), 0);
-      const lowest = Math.min(...activeVariants.map((v) => (levels[v.id] || 0) - (v.reorderLevel || 0)), 0);
+    document.getElementById("p-count").textContent = `${rows.length} product${rows.length === 1 ? "" : "s"}`;
+    UI.showMore(document.getElementById("p-more"), rows.length, state.limit, () => { state.limit += PAGE_SIZE; renderTable(); });
+    if (!rows.length) {
+      tbody.innerHTML = UI.emptyRow(canEdit ? 8 : 7, state.search || state.categoryId || state.stock ? "No products match these filters" : "No products yet — add your first product with “New Product”");
+      return;
+    }
+
+    tbody.innerHTML = rows.slice(0, state.limit).map(({ p, activeVariants, totalStock, price, avail, size }) => {
+      const showVariants = activeVariants.length > 1 || p.hasVariants;
+      const [availText, availKind] = p.active ? AVAILABILITY[avail] : ["Archived", "neutral"];
       return `
         <tr>
-          <td>${p.imageUrl
-            ? `<img src="${U.escapeHtml(p.imageUrl)}" alt="" loading="lazy" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">`
-            : `<div style="width:36px;height:36px;border-radius:6px;background:var(--bg-subtle);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-faint);">🚪</div>`}
-          </td>
-          <td>
-            <strong>${U.escapeHtml(p.name)}</strong>
-            <div class="muted" style="font-size:11.5px"><span class="mono">${U.escapeHtml(p.sku)}</span>${p.description ? ` · ${U.escapeHtml(p.description)}` : ""}</div>
-          </td>
+          <td><div class="prod-cell">
+            ${p.imageUrl ? `<img class="thumb" src="${U.escapeHtml(p.imageUrl)}" alt="" loading="lazy">` : `<span class="thumb">${Icons.svg("door", 18)}</span>`}
+            <div style="min-width:0">
+              <div class="cell-title">${U.escapeHtml(p.name)}</div>
+              <div class="cell-sub"><span class="code">${U.escapeHtml(p.sku)}</span>${p.brand ? ` · ${U.escapeHtml(p.brand)}` : ""}</div>
+            </div>
+          </div></td>
           <td>${U.escapeHtml(catMap[p.categoryId] || "—")}</td>
-          <td style="font-size:12px">${activeVariants.length > 1 || p.hasVariants ? activeVariants.map((v) => `${U.escapeHtml(v.name)}: <strong>${levels[v.id] || 0}</strong>`).join("<br>") : "Single"}</td>
-          <td class="text-right">${UI.badge(totalStock, lowest < 0 ? "warning" : "neutral")}</td>
-          <td class="text-right mono">${priceRangeLabel(activeVariants)}</td>
-          <td>${p.active ? UI.badge("Active", "success") : UI.badge("Archived", "neutral")}</td>
+          <td>${size ? U.escapeHtml(size) : '<span class="muted">—</span>'}</td>
+          <td>${showVariants
+            ? `<div class="variant-lines">${activeVariants.map((v) => `<div class="variant-line"><span class="vl-name">${U.escapeHtml(v.name)}</span><span class="mono ${(levels[v.id] || 0) <= 0 ? "text-danger" : ""}">${levels[v.id] || 0}</span></div>`).join("")}</div>`
+            : `<span class="muted">${U.escapeHtml(U.parseSide(p.name) || "Single")}</span>`}</td>
+          <td class="text-right mono" style="font-weight:600">${U.formatNumber(totalStock)}</td>
+          <td class="text-right mono">${price.label}</td>
+          <td>${UI.badge(availText, availKind)}</td>
           ${canEdit ? `<td><div class="row-actions">
-              <button class="icon-btn" data-edit="${p.id}" title="Edit">✏️</button>
-              <button class="icon-btn" data-archive="${p.id}" title="${p.active ? "Archive" : "Restore"}">${p.active ? "📦" : "♻️"}</button>
-              <button class="icon-btn" data-delete="${p.id}" title="Delete">🗑️</button>
+              <button class="icon-btn" data-edit="${p.id}" title="Edit product" aria-label="Edit ${U.escapeHtml(p.name)}">${Icons.svg("edit", 17)}</button>
+              <button class="icon-btn" data-archive="${p.id}" title="${p.active ? "Archive" : "Restore"}" aria-label="${p.active ? "Archive" : "Restore"} ${U.escapeHtml(p.name)}">${Icons.svg(p.active ? "archive" : "restore", 17)}</button>
+              <button class="icon-btn danger" data-delete="${p.id}" title="Delete" aria-label="Delete ${U.escapeHtml(p.name)}">${Icons.svg("trash", 17)}</button>
             </div></td>` : ""}
         </tr>`;
     }).join("");
@@ -92,11 +143,15 @@
     tbody.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => openProductModal(b.dataset.edit)));
     tbody.querySelectorAll("[data-archive]").forEach((b) => b.addEventListener("click", async () => {
       const p = await DB.Products.get(b.dataset.archive);
-      try {
-        await DB.Products.archive(p.id, !p.active);
-        UI.toast("success", p.active ? "Archived" : "Restored", p.name);
-        renderTable();
-      } catch (err) { UI.toast("error", "Could not update product", err.message); }
+      const doIt = async () => {
+        try {
+          await DB.Products.archive(p.id, !p.active);
+          UI.toast("success", p.active ? "Archived" : "Restored", p.name);
+          renderTable();
+        } catch (err) { UI.toast("error", "Could not update product", err.message); }
+      };
+      if (p.active) UI.confirmDialog({ title: "Archive product?", message: `“${p.name}” will be hidden from sales and the catalog. Its history is kept and you can restore it any time.`, confirmText: "Archive", onConfirm: doIt });
+      else doIt();
     }));
     tbody.querySelectorAll("[data-delete]").forEach((b) => b.addEventListener("click", () => {
       UI.confirmDialog({
@@ -133,7 +188,7 @@
           ? `<input type="text" value="${stock} in stock" disabled title="Change stock on the Inventory page">`
           : `<input class="v-stock" type="number" min="0" step="1" placeholder="Opening stock" value="${v.openingStock ?? 0}">`}
         <input class="v-reorder" type="number" min="0" step="1" placeholder="Reorder at" value="${v.reorderLevel ?? 10}">
-        <button type="button" class="icon-btn" data-remove-row title="Remove">✕</button>
+        <button type="button" class="icon-btn danger" data-remove-row title="Remove variant" aria-label="Remove variant">${Icons.svg("close", 16)}</button>
       </div>`;
   }
 
@@ -173,7 +228,7 @@
         ${VARIANT_HEAD}
         <div id="variant-rows"></div>
         <div id="pf-warning" class="login-error" hidden style="margin-top:10px"></div>
-        <button type="button" class="btn btn-secondary btn-sm" id="add-variant-row" style="margin-top:10px">+ Add Variant Row</button>
+        <button type="button" class="btn btn-secondary btn-sm" id="add-variant-row" style="margin-top:10px">${Icons.svg("plus", 15)} Add Variant</button>
       </form>`;
 
     const footerHTML = `

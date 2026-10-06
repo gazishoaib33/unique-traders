@@ -4,7 +4,8 @@
 (function (global) {
   "use strict";
   const U = Utils;
-  const PAGE_SIZE = 100;
+  // Fewer rows per page on phones, where each row is a tall stacked card.
+  const PAGE_SIZE = window.innerWidth <= 700 ? 30 : 100;
   let state = { search: "", lowOnly: false, limit: PAGE_SIZE };
 
   const TYPE_BADGE = {
@@ -73,8 +74,8 @@
           <td class="text-right muted">${U.formatNumber(r.variant.reorderLevel || 0)}</td>
           <td>${UI.badge(status[0], status[1])}</td>
           <td><div class="row-actions">
-            <button class="icon-btn" data-history="${r.variant.id}" title="Movement history">🕘</button>
-            ${canAdjust ? `<button class="icon-btn" data-adjust="${r.variant.id}" title="Add / remove stock">➕</button>` : ""}
+            <button class="icon-btn" data-history="${r.variant.id}" title="Movement history" aria-label="Movement history">${Icons.svg("history", 17)}</button>
+            ${canAdjust ? `<button class="icon-btn" data-adjust="${r.variant.id}" title="Add / remove stock" aria-label="Add or remove stock">${Icons.svg("plus", 17)}</button>` : ""}
           </div></td>
         </tr>`;
     }).join("");

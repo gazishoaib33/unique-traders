@@ -41,7 +41,7 @@
       <div class="modal ${size === "lg" ? "modal-lg" : size === "sm" ? "modal-sm" : ""}">
         <div class="modal-header">
           <h3>${U.escapeHtml(title)}</h3>
-          <button class="icon-btn" data-close-modal aria-label="Close">✕</button>
+          <button class="icon-btn" data-close-modal aria-label="Close">${Icons.svg("close", 18)}</button>
         </div>
         <div class="modal-body">${bodyHTML}</div>
         ${footerHTML ? `<div class="modal-footer">${footerHTML}</div>` : ""}

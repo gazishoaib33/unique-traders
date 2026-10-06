@@ -33,7 +33,9 @@
       <div class="card" style="max-width:640px;">
         <div class="card-header"><h3>Company Profile</h3></div>
         <div class="card-pad">
+          <p class="muted" style="font-size:12.5px;margin-bottom:14px">These details are printed at the top of every sales memo. Leave a field blank to hide it.</p>
           <div class="field"><label>Company Name</label><input id="s-name" value="${U.escapeHtml(settings.companyName)}" ${isAdmin ? "" : "disabled"}></div>
+          <div class="field" style="margin-top:12px;"><label>Business description <span class="muted">(under the name on memos)</span></label><input id="s-tagline" maxlength="120" placeholder="e.g. Doors, frames &amp; fittings" value="${U.escapeHtml(settings.companyTagline || "")}" ${isAdmin ? "" : "disabled"}></div>
           <div class="field" style="margin-top:12px;"><label>Address</label><textarea id="s-address" rows="2" ${isAdmin ? "" : "disabled"}>${U.escapeHtml(settings.companyAddress)}</textarea></div>
           <div class="field-row" style="margin-top:12px;">
             <div class="field"><label>Phone</label><input id="s-phone" value="${U.escapeHtml(settings.companyPhone)}" ${isAdmin ? "" : "disabled"}></div>
@@ -63,6 +65,7 @@
         try {
         await DB.Settings.update({
           companyName: document.getElementById("s-name").value.trim(),
+          companyTagline: document.getElementById("s-tagline").value.trim(),
           companyAddress: document.getElementById("s-address").value.trim(),
           companyPhone: document.getElementById("s-phone").value.trim(),
           companyEmail: document.getElementById("s-email").value.trim(),
@@ -87,7 +90,7 @@
         <div class="card-header"><h3>Product Categories</h3>${isAdmin ? `<button class="btn btn-primary btn-sm" id="cat-add">+ Add</button>` : ""}</div>
         <div class="table-wrap"><table class="data-table">
           <thead><tr><th>Name</th>${isAdmin ? "<th></th>" : ""}</tr></thead>
-          <tbody>${categories.length ? categories.map((c) => `<tr><td>${U.escapeHtml(c.name)}</td>${isAdmin ? `<td><div class="row-actions"><button class="icon-btn" data-rename="${c.id}">✏️</button><button class="icon-btn" data-del="${c.id}">🗑️</button></div></td>` : ""}</tr>`).join("") : UI.emptyRow(isAdmin ? 2 : 1, "No categories yet")}</tbody>
+          <tbody>${categories.length ? categories.map((c) => `<tr><td>${U.escapeHtml(c.name)}</td>${isAdmin ? `<td><div class="row-actions"><button class="icon-btn" data-rename="${c.id}" title="Rename" aria-label="Rename category">${Icons.svg("edit", 17)}</button><button class="icon-btn danger" data-del="${c.id}" title="Delete" aria-label="Delete category">${Icons.svg("trash", 17)}</button></div></td>` : ""}</tr>`).join("") : UI.emptyRow(isAdmin ? 2 : 1, "No categories yet")}</tbody>
         </table></div>
       </div>
     `;
@@ -133,8 +136,8 @@
               <td>${UI.badge(u.role, u.role === "admin" ? "info" : "neutral")}</td>
               <td>${u.active ? UI.badge("Active", "success") : UI.badge("Inactive", "neutral")}</td>
               <td><div class="row-actions">
-                <button class="icon-btn" data-edit="${u.id}" title="Edit">✏️</button>
-                ${u.id !== me.id ? `<button class="icon-btn" data-del="${u.id}" title="Delete">🗑️</button>` : ""}
+                <button class="icon-btn" data-edit="${u.id}" title="Edit" aria-label="Edit">${Icons.svg("edit", 17)}</button>
+                ${u.id !== me.id ? `<button class="icon-btn" data-del="${u.id}" title="Delete" aria-label="Delete">${Icons.svg("trash", 17)}</button>` : ""}
               </div></td>
             </tr>`).join("")}</tbody>
         </table></div>
@@ -203,9 +206,9 @@
           <div class="card-header"><h3>Backup & Restore</h3></div>
           <div class="card-pad">
             <p class="muted" style="font-size:13px;margin-bottom:14px;">Export a full backup of all data (products, sales, customers, payments…) as a JSON file, or restore from a previous export.</p>
-            <button class="btn btn-secondary" id="d-export" style="margin-right:8px;">⬇ Export Backup</button>
+            <button class="btn btn-secondary" id="d-export" style="margin-right:8px;">${Icons.svg("download", 15)} Export Backup</button>
             <label class="btn btn-secondary" style="cursor:pointer;">
-              ⬆ Import Backup <input type="file" id="d-import" accept="application/json" hidden>
+              ${Icons.svg("upload", 15)} Import Backup <input type="file" id="d-import" accept="application/json" hidden>
             </label>
           </div>
         </div>

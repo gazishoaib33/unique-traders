@@ -71,7 +71,7 @@
         <article class="card catalog-card">
           <div class="catalog-img">${p.imageUrl
             ? `<img src="${U.escapeHtml(p.imageUrl)}" alt="${U.escapeHtml(p.name)}" loading="lazy">`
-            : `<span aria-hidden="true">🚪</span>`}</div>
+            : Icons.svg("door", 44)}</div>
           <div class="catalog-body">
             <h3>${U.escapeHtml(p.name)}</h3>
             ${p.description ? `<p class="catalog-size">${U.escapeHtml(p.description)}</p>` : ""}

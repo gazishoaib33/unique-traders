@@ -42,9 +42,9 @@
           <td class="text-right mono">${U.formatMoney(c.creditLimit)}</td>
           <td class="text-right mono">${UI.badge(U.formatMoney(balance), balance <= 0 ? "success" : overLimit ? "danger" : "warning")}</td>
           <td><div class="row-actions">
-            <button class="icon-btn" data-statement="${c.id}" title="Statement">📄</button>
-            <button class="icon-btn" data-edit="${c.id}" title="Edit">✏️</button>
-            <button class="icon-btn" data-delete="${c.id}" title="Delete">🗑️</button>
+            <button class="icon-btn" data-statement="${c.id}" title="Statement" aria-label="Statement">${Icons.svg("file", 17)}</button>
+            <button class="icon-btn" data-edit="${c.id}" title="Edit" aria-label="Edit">${Icons.svg("edit", 17)}</button>
+            <button class="icon-btn danger" data-delete="${c.id}" title="Delete" aria-label="Delete">${Icons.svg("trash", 17)}</button>
           </div></td>
         </tr>`;
     }).join("");
