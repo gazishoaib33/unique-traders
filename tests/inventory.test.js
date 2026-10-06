@@ -351,3 +351,75 @@ test("admins can switch Viewer mode off; it then can't be entered and open viewe
   assert.match(r.message, /turned off/);
   assert.equal(Auth.login("owner", "pw").ok, true, "admin login unaffected");
 });
+
+// ---------------------------------------------------------------- Memo / receipt
+test("walk-in sales can carry a name/phone for the memo; size is recorded per line", async () => {
+  const { DB } = await freshApp();
+  const { left } = await createDoor(DB, { left: 5 });
+  const sale = await DB.Sales.create({ items: [{ variantId: left.id, qty: 1, unitPrice: 14200 }], customerName: "  Rahim Uddin ", customerPhone: "01700000000", staffId: "u1" });
+  assert.equal(sale.customerName, "Rahim Uddin");
+  assert.equal(sale.customerPhone, "01700000000");
+  assert.equal(sale.items[0].size, "7×3.5 ft", "size parsed from the product description");
+  // Registered customers keep using their saved record, not free text.
+  const c = await DB.Customers.create({ name: "Karim", phone: "01800000000", address: "Tangail" });
+  const s2 = await DB.Sales.create({ items: [{ variantId: left.id, qty: 1, unitPrice: 14200 }], customerId: c.id, customerName: "ignored", paidNow: 14200 });
+  assert.equal(s2.customerName, undefined);
+});
+
+test("memoData builds the memo from stored records only", async () => {
+  const { DB } = await freshApp();
+  await DB.Settings.update({ companyName: "Unique Traders", companyTagline: "", companyAddress: "", companyPhone: "" });
+  const { left, right } = await createDoor(DB, { left: 5, right: 5, price: 1000 });
+  const c = await DB.Customers.create({ name: "Karim", phone: "01800000000", address: "Tangail" });
+  const sale = await DB.Sales.create({
+    customerId: c.id, paidNow: 1000, discountTotal: 50, staffId: (await DB.Users.list())[0].id,
+    items: [{ variantId: left.id, qty: 2, unitPrice: 1000, discount: 100 }, { variantId: right.id, qty: 1, unitPrice: 1000 }],
+  });
+  const m = DB.Sales.memoData(sale.id);
+  assert.equal(m.company.name, "Unique Traders");
+  assert.equal(m.company.address, "", "no invented contact details");
+  assert.equal(m.customer.name, "Karim");
+  assert.equal(m.customer.phone, "01800000000");
+  assert.equal(m.items.length, 2);
+  assert.equal(m.items[0].sl, 1);
+  assert.equal(m.items[0].typeSide, "Left Hand");
+  assert.equal(m.items[1].typeSide, "Right Hand");
+  assert.equal(m.items[0].size, "7×3.5 ft");
+  assert.equal(m.totals.subtotal, 3000);
+  assert.equal(m.totals.discountTotal, 150);
+  assert.equal(m.totals.grandTotal, 2850);
+  assert.equal(m.totals.paid, 1000);
+  assert.equal(m.totals.due, 1850);
+  assert.equal(m.status, "partial");
+  assert.equal(m.staffName, "Owner");
+  assert.equal(DB.Sales.memoData("nope"), null);
+});
+
+test("memoData works for old sales recorded before sizes were stored", async () => {
+  const { DB, Store } = await freshApp();
+  const { left } = await createDoor(DB, { left: 5 });
+  const sale = await DB.Sales.create({ items: [{ variantId: left.id, qty: 1, unitPrice: 14200 }] });
+  // Simulate a sale saved by the previous version (no size on the line).
+  Store.transaction(() => { const s = Store.getCollection("sales").find((x) => x.id === sale.id); delete s.items[0].size; });
+  const m = DB.Sales.memoData(sale.id);
+  assert.equal(m.items[0].size, "7×3.5 ft");
+  assert.equal(m.customer.name, "Walk-in Customer");
+  await DB.Sales.cancel(sale.id);
+  assert.equal(DB.Sales.memoData(sale.id).status, "cancelled");
+});
+
+test("dashboard totals: all-time sales, current stock units, weekly/monthly trends", async () => {
+  const { DB } = await freshApp();
+  const { left, right } = await createDoor(DB, { left: 5, right: 3, price: 1000 });
+  await DB.Sales.create({ items: [{ variantId: left.id, qty: 2, unitPrice: 1000 }] });
+  const cancelled = await DB.Sales.create({ items: [{ variantId: right.id, qty: 1, unitPrice: 1000 }] });
+  await DB.Sales.cancel(cancelled.id);
+  const s = await DB.Dashboard.summary();
+  assert.equal(s.revenueAllTime, 2000, "cancelled sales excluded");
+  assert.equal(s.ordersAllTime, 1);
+  assert.equal(s.stockUnits, 3 + 3);
+  assert.equal(s.trendWeekly.length, 12);
+  assert.equal(s.trendMonthly.length, 12);
+  assert.equal(s.trendMonthly[11].value, 2000);
+  assert.equal(s.revenueToday, 2000);
+});

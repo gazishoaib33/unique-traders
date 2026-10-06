@@ -157,10 +157,45 @@
     return words.every((w) => haystack.includes(w));
   }
 
+  // ---------------------------------------------------------------
+  // Product attributes for display. The catalogue has no separate
+  // size/side fields: size lives in the description ("7x3.5 feet") and
+  // side in the variant name ("Left Hand (L-HB)") or product name ("L/H").
+  // These helpers only READ that text — nothing is stored or changed.
+  // ---------------------------------------------------------------
+  const SIZE_RE = /(\d+(?:\.\d+)?)\s*(?:'|ft|feet|")?\s*[xX×*]\s*(\d+(?:\.\d+)?)\s*(?:'|")?\s*(feet|ft|inch|in|mm|cm)?/;
+  const UNIT = { feet: "ft", ft: "ft", inch: "in", in: "in", mm: "mm", cm: "cm" };
+
+  /** "COSMIC Door . 7x3.5 feet" → "7×3.5 ft"; "Size-various" → "Various"; else "". */
+  function parseSize(...texts) {
+    for (const t of texts) {
+      const m = String(t || "").match(SIZE_RE);
+      if (m) return `${m[1]}×${m[2]}${m[3] ? " " + UNIT[m[3].toLowerCase()] : ""}`;
+    }
+    if (texts.some((t) => /size[-\s]*various/i.test(String(t || "")))) return "Various";
+    return "";
+  }
+
+  /** "Left Hand (L-HB)" / "… L/H" → "Left"; "Right …" / "R/H" → "Right"; else "". */
+  function parseSide(...texts) {
+    for (const t of texts) {
+      const s = String(t || "");
+      if (/\bleft\b|\bL\s*[\/-]\s*H\b|\bLH\b/i.test(s)) return "Left";
+      if (/\bright\b|\bR\s*[\/-]\s*H\b|\bRH\b/i.test(s)) return "Right";
+    }
+    return "";
+  }
+
+  /** True for placeholder variant names that carry no information. */
+  function isPlainVariant(name) {
+    return !name || /^(standard|default)$/i.test(String(name).trim());
+  }
+
   global.Utils = {
     uid, nowISO, todayISO, formatDate, formatDateTime,
     setCurrency, formatMoney, formatNumber, clamp, escapeHtml,
     debounce, downloadTextFile, toCSV, initials, sum, groupBy,
     daysAgoISO, inRange, startOfDay, endOfDay, normalizeSearch, matchesSearch,
+    parseSize, parseSide, isPlainVariant,
   };
 })(window);

@@ -538,7 +538,7 @@
      * clientRef twice (double-click, retry) returns the first sale instead
      * of selling the goods twice.
      */
-    create({ customerId, items, discountTotal = 0, paymentMethod, staffId, note, paidNow, clientRef }) {
+    create({ customerId, items, discountTotal = 0, paymentMethod, staffId, note, paidNow, clientRef, customerName, customerPhone, customerAddress }) {
       return mutate(() => {
         const sales = col("sales", []);
         if (clientRef) {
@@ -563,7 +563,9 @@
           const unitPrice = money(it.unitPrice, `Price for ${label}`);
           const discount = money(isBlank(it.discount) ? 0 : it.discount, `Discount for ${label}`);
           check(discount <= qty * unitPrice, `Discount for ${label} is more than the line total`);
-          return { variantId: variant.id, productId: product.id, productName: product.name, variantName: variant.name, sku: variant.sku, qty, unitPrice, discount, lineTotal: round2(qty * unitPrice - discount), label };
+          // `size` is recorded so the memo keeps showing it even if the product is later edited.
+          const size = U.parseSize(product.description, product.name);
+          return { variantId: variant.id, productId: product.id, productName: product.name, variantName: variant.name, sku: variant.sku, size, qty, unitPrice, discount, lineTotal: round2(qty * unitPrice - discount), label };
         });
 
         // Stock check against the ledger (same variant may appear on several lines).
@@ -596,6 +598,13 @@
         const saleId = U.uid("sale");
         const date = U.nowISO();
         const sale = { id: saleId, invoiceNo, date, customerId: customerId || null, items: lineItems.map(({ label, ...rest }) => rest), subtotal, discountTotal: grandDiscount, taxTotal, grandTotal, paymentMethod: method, staffId, note: note || "", cancelled: false, createdAt: date, clientRef: clientRef || null };
+        // Optional walk-in details, printed on the memo (registered customers use their saved record).
+        if (!customerId) {
+          const clip = (v) => String(v || "").trim().slice(0, 120);
+          if (clip(customerName)) sale.customerName = clip(customerName);
+          if (clip(customerPhone)) sale.customerPhone = clip(customerPhone);
+          if (clip(customerAddress)) sale.customerAddress = clip(customerAddress);
+        }
         sales.push(sale); saveCol("sales", sales);
 
         const ledger = col("stockLedger", []);
@@ -630,6 +639,62 @@
         return sale;
       });
     },
+  };
+
+  /**
+   * Everything a printed memo needs, assembled from existing records only.
+   * Works for old sales too: missing per-line sizes fall back to the
+   * product's current description. Returns null if the sale doesn't exist.
+   */
+  Sales.memoData = function (saleId) {
+    const sale = col("sales", []).find((s) => s.id === saleId);
+    if (!sale) return null;
+    const settings = col("settings", {});
+    const products = Object.fromEntries(col("products", []).map((p) => [p.id, p]));
+    const categories = Object.fromEntries(col("categories", []).map((c) => [c.id, c.name]));
+    const customer = sale.customerId ? col("customers", []).find((c) => c.id === sale.customerId) : null;
+    const staff = sale.staffId ? col("users", []).find((u) => u.id === sale.staffId) : null;
+    const paid = round2(Sales.paidAmount(sale.id));
+    const due = round2(sale.grandTotal - paid);
+    const lineDiscounts = U.sum(sale.items, (it) => it.discount || 0);
+
+    const items = sale.items.map((it, i) => {
+      const product = products[it.productId];
+      const size = it.size || (product ? U.parseSize(product.description, product.name) : "") || "";
+      const side = U.parseSide(it.variantName, it.productName);
+      // Type/Side column: the variant name when it says something (e.g. "Left Hand (L-HB)"),
+      // otherwise the product's category (e.g. "PVC Door").
+      const typeSide = !U.isPlainVariant(it.variantName) ? it.variantName : (product && categories[product.categoryId]) || side || "";
+      return { sl: i + 1, productName: it.productName, sku: it.sku, size, typeSide, qty: it.qty, unitPrice: it.unitPrice, discount: it.discount || 0, lineTotal: it.lineTotal };
+    });
+
+    return {
+      sale,
+      company: {
+        name: settings.companyName || "Unique Traders",
+        tagline: settings.companyTagline || "",
+        address: settings.companyAddress || "",
+        phone: settings.companyPhone || "",
+        email: settings.companyEmail || "",
+      },
+      customer: customer
+        ? { name: customer.name, phone: customer.phone || "", address: customer.address || "", registered: true }
+        : { name: sale.customerName || "Walk-in Customer", phone: sale.customerPhone || "", address: sale.customerAddress || "", registered: false },
+      staffName: staff ? staff.name : "",
+      items,
+      totals: {
+        subtotal: sale.subtotal,
+        lineDiscounts: round2(lineDiscounts),
+        extraDiscount: round2(sale.discountTotal - lineDiscounts),
+        discountTotal: sale.discountTotal,
+        tax: sale.taxTotal,
+        taxRatePercent: Number(settings.taxRatePercent || 0),
+        grandTotal: sale.grandTotal,
+        paid,
+        due: due > 0.009 ? due : 0,
+      },
+      status: Sales.statusOf({ ...sale, paid }),
+    };
   };
 
   // ---------------------------------------------------------------
@@ -784,7 +849,38 @@
 
       const recentSales = [...sales].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8).map((s) => ({ ...s, paid: Sales.paidAmount(s.id) }));
 
+      // Weekly (last 12 weeks, Monday-start) and monthly (last 12 months) revenue.
+      const sumBetween = (from, to) => sales.filter((s) => { const t = new Date(s.date).getTime(); return t >= from && t < to; }).reduce((a, s) => a + s.grandTotal, 0);
+      const trendWeekly = [];
+      const monday = U.startOfDay(new Date());
+      monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+      for (let i = 11; i >= 0; i--) {
+        const start = new Date(monday); start.setDate(start.getDate() - i * 7);
+        const end = new Date(start); end.setDate(end.getDate() + 7);
+        trendWeekly.push({ label: start.toLocaleDateString("en-US", { month: "short", day: "numeric" }), value: sumBetween(start.getTime(), end.getTime()) });
+      }
+      const trendMonthly = [];
+      const now = new Date();
+      for (let i = 11; i >= 0; i--) {
+        const start = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const end = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+        trendMonthly.push({ label: start.toLocaleDateString("en-US", { month: "short", year: "2-digit" }), value: sumBetween(start.getTime(), end.getTime()) });
+      }
+
+      // Units currently in stock across active products/variants.
+      const levels = Stock.levelsMap();
+      const activeProducts = new Set(col("products", []).filter((p) => p.active).map((p) => p.id));
+      const sellable = col("variants", []).filter((v) => v.active && activeProducts.has(v.productId));
+      const stockUnits = sellable.reduce((a, v) => a + Math.max(0, levels[v.id] || 0), 0);
+      const outOfStockCount = sellable.filter((v) => (levels[v.id] || 0) <= 0).length;
+
       return ok({
+        revenueAllTime: round2(U.sum(sales, (s) => s.grandTotal)),
+        ordersAllTime: sales.length,
+        stockUnits,
+        outOfStockCount,
+        trendWeekly,
+        trendMonthly,
         revenueToday: revenueSince(startOfToday),
         revenueWeek: revenueSince(startOfWeek),
         revenueMonth: revenueSince(startOfMonth),
