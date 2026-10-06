@@ -438,6 +438,166 @@
   };
 
   // ---------------------------------------------------------------
+  // Stock count import (js/stock-count-data.js, built by
+  // tools/build-stock-count.js from a physical-count spreadsheet).
+  // Sets each counted variant to its counted quantity, adds products the
+  // app didn't have, and archives (and zeroes) everything not in the
+  // count. Nothing is deleted: stock changes are "correction" ledger
+  // entries and archived products can be restored from Products.
+  // Running it again is safe — variants it created are found by SKU.
+  // ---------------------------------------------------------------
+  function planStockCount(data) {
+    const products = col("products", []);
+    const variants = col("variants", []);
+    const levels = Stock.levelsMap();
+    const key = (s) => String(s || "").trim().toLowerCase();
+    const productBySku = new Map(products.map((p) => [key(p.sku), p]));
+    const variantBySku = new Map();
+    variants.forEach((v) => { if (!variantBySku.has(key(v.sku))) variantBySku.set(key(v.sku), v); });
+
+    const sets = [];        // existing variants → counted quantity
+    const creates = [];     // new variants on existing products
+    const newProducts = []; // products to create
+    const notFound = [];
+    const touchedProducts = new Set();
+    const touchedVariants = new Set();
+    const priceOf = (sku) => { const d = sku && variantBySku.get(key(sku)); return d ? { costPrice: d.costPrice, sellingPrice: d.sellingPrice } : null; };
+
+    function setExisting(v, row) {
+      if (touchedVariants.has(v.id)) { notFound.push(`${row.code} (counted twice)`); return; }
+      sets.push({ variant: v, target: row.stock, reorderLevel: row.reorderLevel, code: row.code });
+      touchedVariants.add(v.id); touchedProducts.add(v.productId);
+    }
+
+    data.updates.forEach((u) => {
+      const v = variantBySku.get(key(u.code)) || variantBySku.get(key(u.variantSku));
+      if (v) setExisting(v, u); else notFound.push(`${u.code} (product code ${u.variantSku} not found)`);
+    });
+    data.addVariants.forEach((a) => {
+      const existing = variantBySku.get(key(a.code));
+      if (existing) { setExisting(existing, a); return; }
+      const p = productBySku.get(key(a.productSku));
+      if (!p) { notFound.push(`${a.code} (product ${a.productSku} not found)`); return; }
+      creates.push({ productId: p.id, spec: a, price: priceOf(a.priceFromSku) });
+      touchedProducts.add(p.id);
+    });
+    data.newProducts.forEach((np) => {
+      const existing = productBySku.get(key(np.sku));
+      const fresh = [];
+      np.variants.forEach((nv) => {
+        const ev = variantBySku.get(key(nv.code));
+        if (ev) setExisting(ev, nv);
+        else if (existing) { creates.push({ productId: existing.id, spec: nv, price: priceOf(nv.priceFromSku) }); touchedProducts.add(existing.id); }
+        else fresh.push({ spec: nv, price: priceOf(nv.priceFromSku) });
+      });
+      if (!existing && fresh.length) newProducts.push({ spec: np, variants: fresh });
+    });
+
+    const archiveProducts = products.filter((p) => p.active && !touchedProducts.has(p.id));
+    const archiveVariants = variants.filter((v) => v.active && touchedProducts.has(v.productId) && !touchedVariants.has(v.id));
+    const reactivate = products.filter((p) => !p.active && touchedProducts.has(p.id));
+    const archivedIds = new Set(archiveProducts.map((p) => p.id));
+    const zeroed = variants.filter((v) => (archivedIds.has(v.productId) || archiveVariants.includes(v)) && (levels[v.id] || 0) > 0);
+    const changes = sets.filter((s) => (levels[s.variant.id] || 0) !== s.target);
+    const created = [...creates, ...newProducts.flatMap((p) => p.variants)];
+    return {
+      levels, sets, creates, newProducts, archiveProducts, archiveVariants, reactivate, zeroed,
+      summary: {
+        id: data.id, label: data.label, rows: data.rows, totalUnits: data.totalUnits,
+        matched: sets.length,
+        stockChanges: changes.length,
+        unitsAdded: changes.reduce((a, s) => a + Math.max(0, s.target - (levels[s.variant.id] || 0)), 0),
+        unitsRemoved: changes.reduce((a, s) => a + Math.max(0, (levels[s.variant.id] || 0) - s.target), 0),
+        newProducts: newProducts.length,
+        newVariants: created.length,
+        newUnits: created.reduce((a, c) => a + c.spec.stock, 0),
+        withoutPrice: created.filter((c) => !c.price).length,
+        archiveProducts: archiveProducts.length,
+        archiveVariants: archiveVariants.length,
+        zeroedVariants: zeroed.length,
+        zeroedUnits: zeroed.reduce((a, v) => a + (levels[v.id] || 0), 0),
+        reactivated: reactivate.length,
+        notFound,
+        archiveNames: archiveProducts.map((p) => p.name),
+        alreadyApplied: (col("settings", {}).stockCounts || []).some((c) => c.id === data.id),
+      },
+    };
+  }
+
+  const StockCount = {
+    available() { return global.STOCK_COUNT || null; },
+    preview(data = global.STOCK_COUNT) {
+      if (!data) return fail("No stock count file is loaded");
+      return ok(planStockCount(data).summary);
+    },
+    apply(data = global.STOCK_COUNT, userId = null) {
+      if (!data) return fail("No stock count file is loaded");
+      return mutate(() => {
+        const plan = planStockCount(data);
+        const date = U.nowISO();
+        const ref = data.label;
+        const ledger = col("stockLedger", []);
+        const variants = col("variants", []);
+        const products = col("products", []);
+        const categories = col("categories", []);
+        const correction = (variantId, change, note) => ledger.push({ id: U.uid("stk"), variantId, change, type: "correction", reference: ref, note, date, userId });
+
+        (data.categories || []).forEach((c) => {
+          if (!categories.some((x) => x.id === c.id || sameText(x.name, c.name))) categories.push({ id: c.id, name: c.name });
+        });
+        const catId = (id, name) => (categories.find((x) => x.id === id) || categories.find((x) => sameText(x.name, name)) || {}).id || null;
+
+        // 1. Counted variants: set stock to the counted quantity.
+        plan.sets.forEach((s) => {
+          const v = variants.find((x) => x.id === s.variant.id);
+          const delta = s.target - (plan.levels[v.id] || 0);
+          if (delta !== 0) correction(v.id, delta, `Stock count: set to ${s.target}`);
+          v.active = true;
+          if (Number.isInteger(s.reorderLevel) && s.reorderLevel >= 0) v.reorderLevel = s.reorderLevel;
+        });
+        plan.reactivate.forEach((p) => { products.find((x) => x.id === p.id).active = true; });
+
+        // 2. New variants / products from the count.
+        const addVariant = (productId, spec, price) => {
+          const v = newVariantRecord(productId, {
+            name: spec.name, sku: spec.code, barcode: "", attributes: {},
+            costPrice: price ? price.costPrice : 0, sellingPrice: price ? price.sellingPrice : 0,
+            reorderLevel: spec.reorderLevel,
+          });
+          variants.push(v);
+          if (spec.stock > 0) ledger.push({ id: U.uid("stk"), variantId: v.id, change: spec.stock, type: "initial", reference: ref, note: "Opening stock from stock count", date, userId });
+        };
+        plan.creates.forEach((c) => {
+          addVariant(c.productId, c.spec, c.price);
+          const p = products.find((x) => x.id === c.productId);
+          p.hasVariants = true; p.updatedAt = date;
+        });
+        plan.newProducts.forEach((np) => {
+          const s = np.spec;
+          const p = { id: U.uid("prod"), sku: s.sku, name: s.name, categoryId: catId(s.categoryId, s.categoryName), brand: s.brand || "", description: s.description || "", unit: s.unit || "pcs", hasVariants: !!s.hasVariants, imageUrl: "", active: true, createdAt: date, updatedAt: date };
+          products.push(p);
+          np.variants.forEach((nv) => addVariant(p.id, nv.spec, nv.price));
+        });
+
+        // 3. Everything not in the count: set its stock to 0 and archive it.
+        plan.zeroed.forEach((v) => correction(v.id, -(plan.levels[v.id] || 0), "Stock count: not in the count"));
+        plan.archiveProducts.forEach((p) => { const rec = products.find((x) => x.id === p.id); rec.active = false; rec.updatedAt = date; });
+        plan.archiveVariants.forEach((v) => { variants.find((x) => x.id === v.id).active = false; });
+
+        const settings = col("settings", {});
+        settings.stockCounts = [...(settings.stockCounts || []), { id: data.id, label: data.label, appliedAt: date, userId }];
+
+        saveCol("categories", categories);
+        saveCol("products", products);
+        saveCol("variants", variants);
+        saveCol("stockLedger", ledger);
+        saveCol("settings", settings);
+        return plan.summary;
+      });
+    },
+  };
+
+  // ---------------------------------------------------------------
   // Customers
   // ---------------------------------------------------------------
   const Customers = {
@@ -980,5 +1140,5 @@
     },
   };
 
-  global.DB = { init, Categories, Products, Variants, Stock, Customers, Sales, Payments, Users, Settings, Dashboard, Reports, Backup };
+  global.DB = { init, Categories, Products, Variants, Stock, StockCount, Customers, Sales, Payments, Users, Settings, Dashboard, Reports, Backup };
 })(window);
